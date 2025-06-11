@@ -32,6 +32,11 @@ const  videoSchema = new mongoose.Schema({
         type: Number, 
         required: true,
     },
+      status: {
+        type: String,
+        enum: ['not-started', 'in-progress', 'completed'],
+        default: 'not-started',
+    },
 }, {
     timestamps: true,
 });

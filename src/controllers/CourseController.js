@@ -159,8 +159,6 @@ const createVideo = expressAsyncHandler(async (req, res) => {
 });
 
 
-
-
 const createTest = expressAsyncHandler(async (req, res) => {
   try {
     const { title, description, courseId, moduleId, questions } = req.body;
@@ -230,6 +228,26 @@ const getCourses = expressAsyncHandler(async (req, res) => {
     });
   }
 });
+// const getCourseById = expressAsyncHandler(async (req, res) => {
+//   const courseId = req.params;
+
+//   try {
+//     const courses = await Course.find(_id = courseId).populate('modules');
+//     res.status(200).json({ 
+//       success: true, 
+//       courses 
+//     });
+
+//   } catch (error) {
+//     console.error('Error in getCourses:', error);
+//     res.status(500).json({ 
+//       success: false, 
+//       message: 'Server error while fetching courses' 
+//     });
+//   }
+// });
+
+
 
 const getModulesByCourseId = expressAsyncHandler(async (req, res) => {
   const { courseId } = req.params;
@@ -249,22 +267,24 @@ const getModulesByCourseId = expressAsyncHandler(async (req, res) => {
 
 const getCourseByCourseId = expressAsyncHandler(async (req, res) => {
   const { courseId } = req.params;
-
   if (!courseId) {
     return res.status(400).json({ success: false, message: 'Course ID is required' });
   }
-
   try {
-    const course = await Course.findById(courseId).populate('instructor', 'name email');
+    const course = await Course.findById(courseId)
+      .populate('modules'); 
+
     if (!course) {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
+
     res.status(200).json({ success: true, course });
   } catch (error) {
     console.error('Error fetching course:', error);
     res.status(500).json({ success: false, message: 'Error fetching course' });
   }
 });
+
 
 const getVideosByModuleId = expressAsyncHandler(async (req, res) => {
   const { moduleId } = req.params;
@@ -282,6 +302,29 @@ const getVideosByModuleId = expressAsyncHandler(async (req, res) => {
   }
 });
 
+const getModuleById = expressAsyncHandler(async (req, res) => {
+  const { moduleId } = req.params;
+
+  if (!moduleId) {
+    return res.status(400).json({ success: false, message: 'Module ID is required' });
+  }
+
+  try {
+    const module = await Module.findById(moduleId)
+      .populate('videos')
+      .populate('tests');
+
+    if (!module) {
+      return res.status(404).json({ success: false, message: 'Module not found' });
+    }
+
+    res.status(200).json({ success: true, module });
+  } catch (error) {
+    console.error('Error fetching module:', error);
+    res.status(500).json({ success: false, message: 'Error fetching module' });
+  }
+});
+
 
 module.exports = {
   createCourse,
@@ -292,4 +335,5 @@ module.exports = {
   getModulesByCourseId,
   getCourseByCourseId,
   getVideosByModuleId,
+  getModuleById
 };
