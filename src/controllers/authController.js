@@ -27,6 +27,7 @@ const registerUser = asyncHandler(async (req, res) => {
             name: user.name,
             email: user.email,
             role: user.role,
+            courses:user.courses,
             token: generateToken(user._id),
         }});
         console.log('User registered successfully:', user);
@@ -45,6 +46,7 @@ const  loginUser=  asyncHandler(async(req, res)=>{
             name: user.name,
             email: user.email,
             role: user.role,
+            courses:user.courses,
             token: generateToken(user._id),
         }});
     } else {

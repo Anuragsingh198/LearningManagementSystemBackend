@@ -74,6 +74,8 @@ const UserCourseEnrollment = expressAsyncHandler(async (req, res) => {
         });
     }
 });
+
 module.exports = {
     getCoursesbyUserId,
+    UserCourseEnrollment,
 };

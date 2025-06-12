@@ -17,7 +17,7 @@ const upload = multer({ storage: storage });
 const createCourse = expressAsyncHandler(async (req, res) => {
   try {
     const { title, description, category, price } = req.body;  // now fields come from multipart form-data
-    const file = req.file; // file uploaded
+    const file = req.file; 
 
     if (!file) {
       return res.status(400).json({ success: false, message: 'Thumbnail is required' });
@@ -228,29 +228,6 @@ const getCourses = expressAsyncHandler(async (req, res) => {
     });
   }
 });
-
-const CourseEnrollment  = expressAsyncHandler(async(req, res) =>{
-  
-})
-// const getCourseById = expressAsyncHandler(async (req, res) => {
-//   const courseId = req.params;
-
-//   try {
-//     const courses = await Course.find(_id = courseId).populate('modules');
-//     res.status(200).json({ 
-//       success: true, 
-//       courses 
-//     });
-
-//   } catch (error) {
-//     console.error('Error in getCourses:', error);
-//     res.status(500).json({ 
-//       success: false, 
-//       message: 'Server error while fetching courses' 
-//     });
-//   }
-// });
-
 
 
 const getModulesByCourseId = expressAsyncHandler(async (req, res) => {

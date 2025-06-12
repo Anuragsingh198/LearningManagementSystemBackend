@@ -3,7 +3,9 @@ const { registerUser, loginUser } = require('../controllers/authController');
 const { protect, isEmployee } = require('../middlewares/authmiddleware');
 const { getCoursesbyUserId } = require('../controllers/userControllers');
 
+
 const useRoutes = express.Router();
+
 
 useRoutes.post('/register', registerUser);
 useRoutes.post('/login', loginUser);
