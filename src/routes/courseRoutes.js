@@ -10,7 +10,7 @@ const  courseRoutes = express.Router();
 courseRoutes.post('/course-module', protect, isInstructor, createModule);
 courseRoutes.post('/create-course', protect, isInstructor, upload.single('thumbnail'), createCourse);
 courseRoutes.post('/create-video', protect, isInstructor, upload.single('video'), createVideo);   
-courseRoutes.post('/test', protect, isInstructor, createTest);
+courseRoutes.post('/addtest', protect, isInstructor, createTest);
 courseRoutes.get('/', protect, getCourses);
 courseRoutes.get('/modules/:courseId' , getModulesByCourseId)
 courseRoutes.get('/:courseId' , getCourseByCourseId)

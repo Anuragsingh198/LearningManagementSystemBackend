@@ -1,6 +1,6 @@
 const expressAsyncHandler = require('express-async-handler');
 const Course = require('../models/CourseSchemas/courseModel');
-const Module = require('../models/CourseSchemas/CourseModule'); 
+const Module = require('../models/CourseSchemas/CourseModule');
 const Video = require('../models/CourseSchemas/VideoModel');
 const Test = require('../models/CourseSchemas/testModel');
 const User = require('../models/users');
@@ -16,8 +16,8 @@ const upload = multer({ storage: storage });
 
 const createCourse = expressAsyncHandler(async (req, res) => {
   try {
-    const { title, description, category, price } = req.body;  // now fields come from multipart form-data
-    const file = req.file; 
+    const { title, description, category, price , compulsory } = req.body;  // now fields come from multipart form-data
+    const file = req.file;
 
     if (!file) {
       return res.status(400).json({ success: false, message: 'Thumbnail is required' });
@@ -55,6 +55,7 @@ const createCourse = expressAsyncHandler(async (req, res) => {
       instructor: user._id,
       instructorName: user.name,
       thumbnail: uploadResult.secure_url,
+      compulsory:compulsory
     });
 
     user.courses.push(course._id);
@@ -68,24 +69,24 @@ const createCourse = expressAsyncHandler(async (req, res) => {
 });
 
 const createModule = expressAsyncHandler(async (req, res) => {
-   console.log('➡️ createModule controller triggered');
+  console.log('➡️ createModule controller triggered');
   try {
     const { title, description, courseId } = req.body;
-    console.log('this is the   data from the   creteMdule  Controller, : ' ,title, description, courseId )
+    console.log('this is the   data from the   creteMdule  Controller, : ', title, description, courseId)
     const user = await User.findById(req.user._id);
 
     if (!user || user.role !== 'instructor') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Only instructors can create modules' 
+      return res.status(403).json({
+        success: false,
+        message: 'Only instructors can create modules'
       });
     }
 
     const course = await Course.findById(courseId);
     if (!course) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Course not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
       });
     }
 
@@ -98,16 +99,16 @@ const createModule = expressAsyncHandler(async (req, res) => {
     course.modules.push(module._id);
     await course.save();
 
-    res.status(201).json({ 
-      success: true, 
-      module 
+    res.status(201).json({
+      success: true,
+      module
     });
 
   } catch (error) {
     console.error("Error in createModule:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error while creating module' 
+    res.status(500).json({
+      success: false,
+      message: 'Server error while creating module'
     });
   }
 });
@@ -158,56 +159,45 @@ const createVideo = expressAsyncHandler(async (req, res) => {
   res.status(201).json({ success: true, video });
 });
 
-
 const createTest = expressAsyncHandler(async (req, res) => {
+  const { testData } = req.body;
+   
+    console.log("test data  is : " , testData)
   try {
-    const { title, description, courseId, moduleId, questions } = req.body;
-    const user = await User.findById(req.user._id);
-
-    if (!user || user.role !== 'instructor') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Only instructors can create tests' 
+    if (!testData) {
+      return res.status(400).json({
+        success: false,
+        message: 'Test data is missing',
       });
     }
+  const   linkedModeule =    await Module.findById(testData.module);
+    const questiondata = testData.questions.map((q) => ({
+      questionText: q.questionText,
+       options: q.options.map(opt => ({ optionText: opt })), 
+      correctAnswer: q.correctAnswer,
+    }));
 
-    const course = await Course.findById(courseId);
-    if (!course) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Course not found' 
-      });
-    }
-
-    const module = await Module.findById(moduleId);
-    if (!module) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Module not found' 
-      });
-    }
-
-    const test = await Test.create({
-      title,
-      description,
-      course: courseId,
-      module: moduleId,
-      questions,
+    const newTest = new Test({
+      title: testData.title,
+      description: testData.description,
+      module: testData.module,
+      questions: questiondata,
     });
 
-    module.tests.push(test._id);
-    await module.save();
 
-    res.status(201).json({ 
-      success: true, 
-      test 
+    await newTest.save();
+     linkedModeule.tests.push(newTest._id);
+     await linkedModeule.save()
+    res.status(201).json({
+      success: true,
+      message: 'Test added successfully',
+      test: newTest,
     });
-
   } catch (error) {
-    console.error('Error in createTest:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error while creating test' 
+    console.error('Error adding test:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
     });
   }
 });
@@ -215,16 +205,16 @@ const createTest = expressAsyncHandler(async (req, res) => {
 const getCourses = expressAsyncHandler(async (req, res) => {
   try {
     const courses = await Course.find().populate('instructor', 'name email');
-    res.status(200).json({ 
-      success: true, 
-      courses 
+    res.status(200).json({
+      success: true,
+      courses
     });
 
   } catch (error) {
     console.error('Error in getCourses:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error while fetching courses' 
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching courses'
     });
   }
 });
@@ -253,7 +243,7 @@ const getCourseByCourseId = expressAsyncHandler(async (req, res) => {
   }
   try {
     const course = await Course.findById(courseId)
-      .populate('modules'); 
+      .populate('modules');
 
     if (!course) {
       return res.status(404).json({ success: false, message: 'Course not found' });
@@ -306,47 +296,7 @@ const getModuleById = expressAsyncHandler(async (req, res) => {
 });
 
 
-const addTest = expressAsyncHandler(async (req, res) => {
-  const { testData } = req.body;
 
-  try {
-    if (!testData) {
-      return res.status(400).json({
-        success: false,
-        message: 'Test data is missing',
-      });
-    }
-
-    const questiondata = testData.questions.map((q) => ({
-      questionText: q.questionText,
-      options: q.options.map((opt) => ({
-        optionText: opt.optionText,
-        isCorrect: opt.isCorrect || false, 
-      })),
-    }));
-
-    const newTest = new Test({
-      title: testData.title,
-      description: testData.description,
-      module: testData.module,
-      questions: questiondata,
-    });
-
-    await newTest.save();
-
-    res.status(201).json({
-      success: true,
-      message: 'Test added successfully',
-      test: newTest,
-    });
-  } catch (error) {
-    console.error('Error adding test:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-    });
-  }
-});
 
 
 

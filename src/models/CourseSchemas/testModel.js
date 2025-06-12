@@ -12,6 +12,10 @@ const testSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Module',
   },
+isCompleted:{
+    type:Boolean,
+    default: false
+},
   questions: [
     {
       questionText: {
@@ -24,12 +28,11 @@ const testSchema = new mongoose.Schema({
             type: String,
             required: true,
           },
-          isCorrect: {
-            type: Boolean,
-            default: false,
-          },
         }
       ],
+      correctAnswer:{
+        type:String, 
+      }
     }
   ],
 }, {
