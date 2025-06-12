@@ -26,6 +26,6 @@ useRoutes.get('/logout', (req, res) => {
     res.json({ success: true, message: 'User logged out successfully' });
 });
 useRoutes.get('/:userId' , protect, getCoursesbyUserId)
-useRoutes.get('/:userId' , protect, isEmployee , UserCourseEnrollment)
+useRoutes.post('/enrollCourse' , protect, isEmployee , UserCourseEnrollment)
 
 module.exports = useRoutes;

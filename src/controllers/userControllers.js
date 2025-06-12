@@ -4,7 +4,7 @@ const Module = require('../models/CourseSchemas/CourseModule');
 const Video = require('../models/CourseSchemas/VideoModel');
 const Test = require('../models/CourseSchemas/testModel');
 const User = require('../models/users');
-
+const  mongoose =  require('mongoose');
 const getCoursesbyUserId = expressAsyncHandler(async (req, res) => {
     const { userId } = req.params;
 
@@ -44,9 +44,10 @@ const getCoursesbyUserId = expressAsyncHandler(async (req, res) => {
 
 const UserCourseEnrollment = expressAsyncHandler(async (req, res) => {
     const { courseId } = req.body;
-    // if (!mongoose.Types.ObjectId.isValid(courseId)) {
-    //     return res.status(400).json({success: false,message: 'Invalid course ID.'});
-    // }
+    console.log("course id  from  course  enrollment  cotroller is : " , courseId)
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+        return res.status(400).json({success: false,message: 'Invalid course ID.'});
+    }
 
     try {
         const user = await User.findById(req.user._id).populate('courses');
