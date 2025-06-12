@@ -1,6 +1,6 @@
 const express = require('express');
 const { registerUser, loginUser } = require('../controllers/authController');
-const { protect } = require('../middlewares/authmiddleware');
+const { protect, isEmployee } = require('../middlewares/authmiddleware');
 const { getCoursesbyUserId } = require('../controllers/userControllers');
 
 const useRoutes = express.Router();
@@ -24,5 +24,6 @@ useRoutes.get('/logout', (req, res) => {
     res.json({ success: true, message: 'User logged out successfully' });
 });
 useRoutes.get('/:userId' , protect, getCoursesbyUserId)
+useRoutes.get('/:userId' , protect, isEmployee , getCoursesbyUserId)
 
 module.exports = useRoutes;
