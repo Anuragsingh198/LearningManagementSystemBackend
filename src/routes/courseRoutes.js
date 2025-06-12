@@ -7,9 +7,8 @@ const upload = multer({ storage: storage });
 const  courseRoutes = express.Router();
 
 
-courseRoutes.post('/create-course', protect, isInstructor, upload.single('thumbnail'), createCourse);
-
 courseRoutes.post('/course-module', protect, isInstructor, createModule);
+courseRoutes.post('/create-course', protect, isInstructor, upload.single('thumbnail'), createCourse);
 courseRoutes.post('/create-video', protect, isInstructor, upload.single('video'), createVideo);   
 courseRoutes.post('/test', protect, isInstructor, createTest);
 courseRoutes.get('/', protect, getCourses);

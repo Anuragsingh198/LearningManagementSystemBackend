@@ -228,6 +228,10 @@ const getCourses = expressAsyncHandler(async (req, res) => {
     });
   }
 });
+
+const CourseEnrollment  = expressAsyncHandler(async(req, res) =>{
+  
+})
 // const getCourseById = expressAsyncHandler(async (req, res) => {
 //   const courseId = req.params;
 
@@ -308,7 +312,6 @@ const getModuleById = expressAsyncHandler(async (req, res) => {
   if (!moduleId) {
     return res.status(400).json({ success: false, message: 'Module ID is required' });
   }
-
   try {
     const module = await Module.findById(moduleId)
       .populate('videos')
@@ -324,6 +327,50 @@ const getModuleById = expressAsyncHandler(async (req, res) => {
     res.status(500).json({ success: false, message: 'Error fetching module' });
   }
 });
+
+
+const addTest = expressAsyncHandler(async (req, res) => {
+  const { testData } = req.body;
+
+  try {
+    if (!testData) {
+      return res.status(400).json({
+        success: false,
+        message: 'Test data is missing',
+      });
+    }
+
+    const questiondata = testData.questions.map((q) => ({
+      questionText: q.questionText,
+      options: q.options.map((opt) => ({
+        optionText: opt.optionText,
+        isCorrect: opt.isCorrect || false, 
+      })),
+    }));
+
+    const newTest = new Test({
+      title: testData.title,
+      description: testData.description,
+      module: testData.module,
+      questions: questiondata,
+    });
+
+    await newTest.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Test added successfully',
+      test: newTest,
+    });
+  } catch (error) {
+    console.error('Error adding test:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+});
+
 
 
 module.exports = {

@@ -12,7 +12,7 @@ const courseSchema = new mongoose.Schema({
     students: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     percentageCompleted: { type: Number, default: 0 },
     certificate: { type: String, default: '' },
-    priority: { type: String, default: '0' },
+    compulsory: { type: Boolean, default: 'false' },
 }, { timestamps: true });
 
 const Course = mongoose.model('Course', courseSchema);
