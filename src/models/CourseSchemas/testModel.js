@@ -12,6 +12,10 @@ const testSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Module',
   },
+  user:{
+        type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  },
 isCompleted:{
     type:Boolean,
     default: false
@@ -38,7 +42,6 @@ isCompleted:{
 }, {
   timestamps: true,
 });
-
 
 const Test = mongoose.model('Test', testSchema);
 module.exports = Test;

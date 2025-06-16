@@ -26,6 +26,7 @@ const isInstructor = (req, res, next) => {
     }
 }
 const isEmployee = (req, res, next) => {
+    console.log("user from isemployee middelware : " , req.user )
     if(req.user && req.user.role === 'employee') {
         next();
     } else {
