@@ -508,6 +508,75 @@ const  getCourseProgress =  expressAsyncHandler(async(req , res) =>{
     }
 })
 
+const updateVideoProgress = expressAsyncHandler(async (req, res) => {
+  // console.log('update video progress controller called');
+  const { courseId, videoId, moduleId } = req.body;
+  const userId = req.user._id;
+
+  try {
+    const progress = await Progress.findOne({ user: userId, course: courseId });
+
+    if (!progress) {
+      return res.status(404).json({ success: false, message: "Progress not found" });
+    }
+
+    let moduleUpdated = false;
+
+    // Find the specific module by moduleId
+    const targetModule = progress.moduleProgress.find(
+      m => m.module.toString() === moduleId
+    );
+
+    if (!targetModule) {
+      return res.status(404).json({ success: false, message: "Module not found in progress" });
+    }
+
+    // Find the video inside the matched module
+    const video = targetModule.videoProgress.find(v => v.video.toString() === videoId);
+
+    if (!video) {
+      return res.status(404).json({ success: false, message: "Video not found in specified module" });
+    }
+
+    if (video.status === "completed") {
+      return res.status(200).json({ success: true, message: "Video already marked as completed" });
+    }
+
+    // Step 1: Update video status
+    video.status = "completed";
+    moduleUpdated = true;
+
+    // Step 2: Check if all videos are completed
+    const allVideosCompleted = targetModule.videoProgress.every(v => v.status === "completed");
+
+    // Step 3: Check if all tests are completed
+    const allTestsCompleted = targetModule.testStatus.every(t => t.isCompleted === true);
+
+    if (allVideosCompleted && allTestsCompleted) {
+      targetModule.percentageCompleted = 100;
+      targetModule.status = "completed";
+    }
+
+    await progress.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Video progress updated",
+      progress,
+    });
+
+  } catch (error) {
+    console.error("Error in updating video progress:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message || "Something went wrong"
+    });
+  }
+});
+
+
+
 module.exports = {
   createCourse,
   createModule,
@@ -520,5 +589,6 @@ module.exports = {
   getModuleById,
   testSubmit,
   enrollCourse,
-  getCourseProgress
+  getCourseProgress,
+  updateVideoProgress
 };

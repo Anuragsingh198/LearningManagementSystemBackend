@@ -2,7 +2,7 @@ const express = require('express');
 const { registerUser, loginUser } = require('../controllers/authController');
 const { protect, isEmployee } = require('../middlewares/authmiddleware');
 const { getCoursesbyUserId} = require('../controllers/userControllers');
-const { testSubmit, enrollCourse, getCourseProgress } = require('../controllers/CourseController');
+const { testSubmit, enrollCourse, getCourseProgress, updateVideoProgress } = require('../controllers/CourseController');
 
 
 const useRoutes = express.Router();
@@ -29,6 +29,7 @@ useRoutes.get('/logout', (req, res) => {
     res.json({ success: true, message: 'User logged out successfully' });
 });
 useRoutes.get('/:userId' , protect, getCoursesbyUserId)
+useRoutes.post('/video-progress', protect, updateVideoProgress)
 // useRoutes.post('/enrollCourse' , protect, isEmployee , UserCourseEnrollment)
 
 module.exports = useRoutes;
