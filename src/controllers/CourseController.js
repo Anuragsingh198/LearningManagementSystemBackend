@@ -15,7 +15,7 @@ const upload = multer({ storage: storage });
 
 const createCourse = expressAsyncHandler(async (req, res) => {
   try {
-    const { title, description, category, price, compulsory } = req.body; 
+    const { title, description, category, price, compulsory } = req.body;
     const file = req.file;
 
     if (!file) {
@@ -322,7 +322,7 @@ const getModuleById = expressAsyncHandler(async (req, res) => {
 });
 
 const testSubmit = expressAsyncHandler(async (req, res) => {
-const { testId, userAnswers, progressId, moduleId } = req.body;
+  const { testId, userAnswers, progressId, moduleId } = req.body;
 
   console.log("testSubmit data:", { testId, userAnswers });
 
@@ -339,9 +339,7 @@ const { testId, userAnswers, progressId, moduleId } = req.body;
   try {
     const test = await Test.findById(testId);
     if (!test)
-      return res
-        .status(404)
-        .json({ success: false, message: "Test not found" });
+      return res.status(404).json({ success: false, message: "Test not found" });
 
     const questions = test.questions;
     if (questions.length === 0)
@@ -356,6 +354,7 @@ const { testId, userAnswers, progressId, moduleId } = req.body;
     });
 
     const score = correctCount;
+    const percentage = (score / questions.length) * 100;
 
     const progress = await Progress.findById(progressId);
     if (!progress)
@@ -379,9 +378,24 @@ const { testId, userAnswers, progressId, moduleId } = req.body;
         .status(404)
         .json({ success: false, message: "Test not found in module" });
 
-    targetTestData.isCompleted = true;
+
+    targetTestData.isCompleted = percentage >= 75;
     targetTestData.marksScored = score;
     targetTestData.retakeCount = (targetTestData.retakeCount || 0) + 1;
+
+    if (targetTestData.isCompleted) {
+      const allVideosCompleted = module.videoProgress.every(
+        (video) => video.status === "completed"
+      );
+      const allTestsCompleted = module.testStatus.every(
+        (test) => test.isCompleted === true
+      );
+
+      if (allVideosCompleted && allTestsCompleted) {
+        module.status = "completed";
+      }
+    }
+
 
     await progress.save();
 
@@ -493,20 +507,60 @@ const enrollCourse = expressAsyncHandler(async (req, res) => {
   }
 });
 
-const  getCourseProgress =  expressAsyncHandler(async(req , res) =>{
-    const { courseId , userId } = req.body;
+const getCourseProgress = expressAsyncHandler(async (req, res) => {
+  const { courseId, userId } = req.body;
 
-    try {
-       const  progress =   await Progress.findOne({ user: userId , course: courseId }).populate("moduleProgress");
-       if (!progress) {
-        return res.status(404).json({ success: false, message: "Progress not found"});
-       }
-       res.status(200).json({success:true , progress})
-    }catch (error) {
-      console.error("Error in enrollCourse:", error);
-    return res.status(500).json({ success: false, message: "Server error" });
+  try {
+    const progress = await Progress.findOne({ user: userId, course: courseId });
+    if (!progress) {
+      return res.status(404).json({ success: false, message: "Progress not found" });
     }
-})
+
+    let completedModulesCount = 0;
+
+    // Iterate through each moduleProgress to update statuses
+    progress.moduleProgress.forEach((module) => {
+      const allVideosCompleted = module.videoProgress.every(
+        (video) => video.status === "completed"
+      );
+      const allTestsCompleted = module.testStatus.every(
+        (test) => test.isCompleted === true
+      );
+
+      if (allVideosCompleted && allTestsCompleted) {
+        module.status = "completed";
+        completedModulesCount += 1;
+      } else {
+        module.status = "in-progress"; // or "in-progress" based on your logic
+      }
+    });
+
+    const totalModules = progress.moduleProgress.length;
+    const percentage =
+      totalModules > 0
+        ? Math.round((completedModulesCount / totalModules) * 100)
+        : 0;
+
+    progress.overallPercentage = percentage;
+
+    // Optional: mark course completed if all modules are done
+    if (percentage === 100) {
+      progress.isCourseCompleted = true;
+      progress.status = "completed";
+    } else {
+      progress.isCourseCompleted = false;
+      progress.status = "pending"; // or "in-progress"
+    }
+
+    await progress.save();
+
+    res.status(200).json({ success: true, progress });
+  } catch (error) {
+    console.error("Error in getCourseProgress:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 
 const updateVideoProgress = expressAsyncHandler(async (req, res) => {
   // console.log('update video progress controller called');
@@ -575,6 +629,150 @@ const updateVideoProgress = expressAsyncHandler(async (req, res) => {
   }
 });
 
+const createUserProgressForNewModule = expressAsyncHandler(async (req, res) => {
+  const { courseId, chapterId } = req.body;
+  const userId = req.user._id;
+
+  const progress = await Progress.findOne({ user: userId, course: courseId });
+
+  if (!progress) {
+    return res.status(404).json({ success: false, message: "Progress not found" });
+  }
+
+  const existingModule = progress.moduleProgress.find(mod => mod.module.toString() === chapterId);
+
+  if (existingModule) {
+    return res.status(200).json({ success: true, message: "Module already exists in progress", progress });
+  }
+
+  const module = await Module.findById(chapterId).populate('videos').populate('tests');
+
+  if (!module) {
+    return res.status(404).json({ success: false, message: "Module not found" });
+  }
+
+  // Prepare videoProgress and testStatus arrays
+  const videoProgress = (module.videos || []).map(video => ({
+    video: video._id,
+    status: "not-started"
+  }));
+
+  const testStatus = (module.tests || []).map(test => ({
+    test: test._id,
+    isCompleted: false,
+    retakeCount: 0,
+    marksScored: 0
+  }));
+
+  const newModuleProgress = {
+    module: chapterId,
+    status: 'not-started',
+    videoIndex: 0,
+    percentageCompleted: 0,
+    videoProgress,
+    testStatus
+  };
+
+  progress.moduleProgress.push(newModuleProgress);
+
+  await progress.save();
+
+
+  return res.status(200).json({
+    success: true,
+    message: "updated user progress successfully",
+    progress,
+    module
+  })
+
+});
+
+
+const checkVideoOrTestInUserProgressSchema = expressAsyncHandler(async (req, res) => {
+  const { videoId, courseId, moduleId, testId } = req.body;
+  const userId = req.user._id;
+
+  const progress = await Progress.findOne({ user: userId, course: courseId });
+
+  if (!progress) {
+    return res.status(404).json({ success: false, message: "Progress not found" });
+  }
+
+  // Find the module in the moduleProgress array
+  const moduleProgress = progress.moduleProgress.find(
+    (mod) => mod.module.toString() === moduleId
+  );
+
+  if (!moduleProgress) {
+    return res.status(404).json({ success: false, message: "Module progress not found" });
+  }
+
+  // Check if video already exists in videoProgress
+  if (videoId) {
+    const videoExists = moduleProgress.videoProgress.some(
+      (vp) => vp.video.toString() === videoId
+    );
+
+    if (videoExists) {
+      return res.status(200).json({
+        success: true,
+        message: "Video already exists in user progress",
+        progress,
+      });
+    }
+
+    moduleProgress.videoProgress.push({
+      video: videoId,
+      status: "in-progress",
+    });
+
+    await progress.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Video added to progress successfully",
+      progress,
+    });
+  }
+
+  if (testId) {
+    const testExists = moduleProgress.testStatus.some(
+      (test) => test.test.toString() === testId
+    );
+
+    if (testExists) {
+      return res.status(200).json({
+        success: true,
+        message: "Test already exists in user progress",
+        progress,
+      });
+    }
+
+    moduleProgress.testStatus.push({
+      test: testId,
+      isCompleted: false,
+      retakeCount: 0,
+      marksScored: 0,
+    });
+
+    await progress.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Test added to progress successfully",
+      progress,
+    });
+  }
+
+  return res.status(400).json({
+    success: false,
+    message: "Neither videoId nor testId provided",
+  });
+
+
+});
+
+
 
 
 module.exports = {
@@ -590,5 +788,7 @@ module.exports = {
   testSubmit,
   enrollCourse,
   getCourseProgress,
-  updateVideoProgress
+  updateVideoProgress,
+  createUserProgressForNewModule,
+  checkVideoOrTestInUserProgressSchema
 };

@@ -13,6 +13,7 @@ const courseSchema = new mongoose.Schema({
     percentageCompleted: { type: Number, default: 0 },
     certificate: { type: String, default: '' },
     compulsory: { type: Boolean, default: 'false' },
+    
 }, { timestamps: true });
 
 const Course = mongoose.model('Course', courseSchema);
