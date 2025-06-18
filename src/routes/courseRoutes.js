@@ -1,6 +1,6 @@
-const {createCourse, createModule, createTest, createVideo , getCourses, getModulesByCourseId, getCourseByCourseId, getVideosByModuleId, getModuleById, getCourseProgress} = require('../controllers/CourseController');
+const {createCourse, createModule, createTest, createVideo , getCourses, getModulesByCourseId, getCourseByCourseId, getVideosByModuleId, getModuleById, getCourseProgress, generateCertificate} = require('../controllers/CourseController');
 const express = require('express');
-const { protect, isInstructor } = require('../middlewares/authmiddleware');
+const { protect, isInstructor, isEmployee } = require('../middlewares/authmiddleware');
 const multer = require('multer');
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
@@ -14,6 +14,7 @@ courseRoutes.post('/addtest', protect, isInstructor, createTest);
 courseRoutes.get('/', protect, getCourses);
 courseRoutes.get('/modules/:courseId' , getModulesByCourseId)
 courseRoutes.get('/:courseId' , getCourseByCourseId)
+courseRoutes.post('/generate-certificate' ,protect , isEmployee ,generateCertificate)
 
 // courseRoutes.get('/videos/:moduleId' , getVideosByModuleId)
 courseRoutes.get('/module/:moduleId' , getModuleById)

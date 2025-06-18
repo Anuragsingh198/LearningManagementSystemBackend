@@ -9,13 +9,18 @@ const Progress = require("../models/CourseSchemas/courseSatusModel");
 const streamifier = require("streamifier");
 const cloudinary = require("../utils/cloudinary");
 const mongoose = require("mongoose");
+const puppeteer = require('puppeteer');
+const fs = require('fs')
+const path = require('path');
+const Certificate = require("../models/certificateSchema");
+const os = require('os');
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 const createCourse = expressAsyncHandler(async (req, res) => {
   try {
-    const { title, description, category, price, compulsory } = req.body; 
+    const { title, description, category, price, compulsory } = req.body;
     const file = req.file;
 
     if (!file) {
@@ -322,7 +327,7 @@ const getModuleById = expressAsyncHandler(async (req, res) => {
 });
 
 const testSubmit = expressAsyncHandler(async (req, res) => {
-const { testId, userAnswers, progressId, moduleId } = req.body;
+  const { testId, userAnswers, progressId, moduleId } = req.body;
 
   console.log("testSubmit data:", { testId, userAnswers });
 
@@ -493,19 +498,19 @@ const enrollCourse = expressAsyncHandler(async (req, res) => {
   }
 });
 
-const  getCourseProgress =  expressAsyncHandler(async(req , res) =>{
-    const { courseId , userId } = req.body;
+const getCourseProgress = expressAsyncHandler(async (req, res) => {
+  const { courseId, userId } = req.body;
 
-    try {
-       const  progress =   await Progress.findOne({ user: userId , course: courseId }).populate("moduleProgress");
-       if (!progress) {
-        return res.status(404).json({ success: false, message: "Progress not found"});
-       }
-       res.status(200).json({success:true , progress})
-    }catch (error) {
-      console.error("Error in enrollCourse:", error);
-    return res.status(500).json({ success: false, message: "Server error" });
+  try {
+    const progress = await Progress.findOne({ user: userId, course: courseId }).populate("moduleProgress");
+    if (!progress) {
+      return res.status(404).json({ success: false, message: "Progress not found" });
     }
+    res.status(200).json({ success: true, progress })
+  } catch (error) {
+    console.error("Error in enrollCourse:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
 })
 
 const updateVideoProgress = expressAsyncHandler(async (req, res) => {
@@ -576,6 +581,112 @@ const updateVideoProgress = expressAsyncHandler(async (req, res) => {
 });
 
 
+const generateCertificate = expressAsyncHandler(async (req, res) => {
+  const { name, courseTitle, empId, courseId, certificateType } = req.body;
+  const userId = req.user._id;
+
+  if (!mongoose.Types.ObjectId.isValid(courseId)) {
+    return res.status(400).json({ success: false, message: "Invalid course ID." });
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ success: false, message: "Invalid user ID." });
+  }
+
+  try {
+
+    const existingCertificate = await Certificate.find({ userId, courseId });
+    if (existingCertificate) {
+      return res.status(200).json({
+        success: true,
+        message: 'Certificate generated successfully.',
+        certificate: existingCertificate
+      })
+    }
+    const certificateId = `CERT-${Date.now()}`;
+    const awardedDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    const templatePath = path.join(__dirname, '../templates/certificatetemplate.html');
+    console.log("Template Path:", templatePath);
+
+    let html = fs.readFileSync(templatePath, 'utf8');
+
+    html = html
+      .replace('Adi Jain', name)
+      .replace('EMP-789654', empId)
+      .replace('DV-2024-001', certificateId)
+      .replace('"Python"', `"${courseTitle}"`)
+      .replace('June 16, 2025', awardedDate);
+
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '0px',
+        right: '0px',
+        bottom: '0px',
+        left: '0px'
+      }
+    });
+    await browser.close();
+
+    const cloudinaryUpload = () => {
+      return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            resource_type: 'raw',
+            folder: 'certificates',
+            public_id: certificateId,
+            format: 'pdf',
+            type: 'upload',
+          },
+          (error, result) => {
+            if (error) {
+              console.error('Cloudinary Upload Error:', error);
+              reject(error);
+            } else {
+              resolve(result);
+            }
+          }
+        );
+
+        const stream = require('stream');
+        const bufferStream = new stream.PassThrough();
+        bufferStream.end(pdfBuffer);
+        bufferStream.pipe(uploadStream);
+      });
+    };
+
+    const cloudinaryResult = await cloudinaryUpload();
+
+    const newCertificate = await Certificate.create({
+      user: userId,
+      course: courseId,
+      certificateUrl: cloudinaryResult.secure_url,
+      issueDate: new Date(),
+      certificateType,
+      isGenerated: true
+    });
+    res.status(200).json({
+      success: true,
+      message: 'Certificate generated successfully.',
+      certificate: newCertificate
+    });
+
+  } catch (error) {
+    console.error('Certificate generation failed:', error);
+    return res.status(500).json({ success: false, message: 'Error generating certificate' });
+  }
+});
+
 
 module.exports = {
   createCourse,
@@ -590,5 +701,6 @@ module.exports = {
   testSubmit,
   enrollCourse,
   getCourseProgress,
-  updateVideoProgress
+  updateVideoProgress,
+  generateCertificate
 };
