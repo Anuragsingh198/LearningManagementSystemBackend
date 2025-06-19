@@ -80,6 +80,8 @@ const createCourse = expressAsyncHandler(async (req, res) => {
   }
 });
 
+
+
 const createModule = expressAsyncHandler(async (req, res) => {
   console.log("➡️ createModule controller triggered");
   try {
@@ -182,6 +184,8 @@ const createVideo = expressAsyncHandler(async (req, res) => {
 
   res.status(201).json({ success: true, video });
 });
+
+
 
 const createTest = expressAsyncHandler(async (req, res) => {
   const { testData } = req.body;
@@ -340,6 +344,7 @@ const testSubmit = expressAsyncHandler(async (req, res) => {
           "Test ID, user Answers, Module ID, and Progress ID are required",
       });
   }
+
 
   try {
     const test = await Test.findById(testId);
@@ -595,14 +600,14 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
 
   try {
 
-    // const existingCertificate = await Certificate.find({ userId, courseId });
-    // if (existingCertificate) {
-    //   return res.status(200).json({
-    //     success: true,
-    //     message: 'Certificate generated successfully.',
-    //     certificate: existingCertificate
-    //   })
-    // }
+    const existingCertificate = await Certificate.find({ userId, courseId });
+    if (existingCertificate) {
+      return res.status(200).json({
+        success: true,
+        message: 'Certificate generated successfully.',
+        certificate: existingCertificate
+      })
+    }
     const certificateId = `CERT-${Date.now()}`;
     const awardedDate = new Date().toLocaleDateString('en-US', {
       year: 'numeric',
