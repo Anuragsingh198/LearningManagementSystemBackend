@@ -131,7 +131,7 @@ const createModule = expressAsyncHandler(async (req, res) => {
 
 const createVideo = expressAsyncHandler(async (req, res) => {
   const { title, description, courseId, moduleId, duration } = req.body;
-
+  
   if (!title || !description || !courseId || !moduleId || !duration) {
     return res
       .status(400)
@@ -412,7 +412,8 @@ const testSubmit = expressAsyncHandler(async (req, res) => {
 });
 
 const enrollCourse = expressAsyncHandler(async (req, res) => {
-  const { courseId, userId } = req.body;
+  const { courseId } = req.body;
+  const userId = req.user._id;
 
   if (!mongoose.Types.ObjectId.isValid(courseId)) {
     return res
@@ -512,35 +513,48 @@ const enrollCourse = expressAsyncHandler(async (req, res) => {
   }
 });
 
+
 const getCourseProgress = expressAsyncHandler(async (req, res) => {
   const { courseId, userId } = req.body;
-const getCourseProgress = expressAsyncHandler(async (req, res) => {
-  const { courseId, userId } = req.body;
+  console.log('get course progress called');
 
   try {
     const progress = await Progress.findOne({ user: userId, course: courseId });
+
     if (!progress) {
       return res.status(404).json({ success: false, message: "Progress not found" });
     }
 
     let completedModulesCount = 0;
+    console.log('completed module count before: ', completedModulesCount);
 
     // Iterate through each moduleProgress to update statuses
     progress.moduleProgress.forEach((module) => {
-      const allVideosCompleted = module.videoProgress.every(
+      const totalVideos = module.videoProgress.length;
+      const totalTests = module.testStatus.length;
+
+      const completedVideos = module.videoProgress.filter(
         (video) => video.status === "completed"
-      );
-      const allTestsCompleted = module.testStatus.every(
+      ).length;
+
+      const completedTests = module.testStatus.filter(
         (test) => test.isCompleted === true
-      );
+      ).length;
+
+      const allVideosCompleted = totalVideos > 0 && completedVideos === totalVideos;
+      const allTestsCompleted = totalTests > 0 && completedTests === totalTests;
 
       if (allVideosCompleted && allTestsCompleted) {
         module.status = "completed";
         completedModulesCount += 1;
+        console.log('completed module count incremented:', completedModulesCount);
+      } else if (completedVideos === 0 && completedTests === 0) {
+        module.status = "not-started";
       } else {
-        module.status = "in-progress"; // or "in-progress" based on your logic
+        module.status = "in-progress";
       }
     });
+
 
     const totalModules = progress.moduleProgress.length;
     const percentage =
@@ -548,37 +562,35 @@ const getCourseProgress = expressAsyncHandler(async (req, res) => {
         ? Math.round((completedModulesCount / totalModules) * 100)
         : 0;
 
+    console.log('overall percentage check: ', percentage);
     progress.overallPercentage = percentage;
 
     // Optional: mark course completed if all modules are done
     if (percentage === 100) {
+      console.log('entered if condition');
       progress.isCourseCompleted = true;
       progress.status = "completed";
     } else {
+      console.log('entered else condition', percentage);
       progress.isCourseCompleted = false;
       progress.status = "pending"; // or "in-progress"
     }
 
     await progress.save();
 
-    res.status(200).json({ success: true, progress });
+    res.status(200).json({
+      success: true,
+      message: 'Data from course progress fetched',
+      progress,
+    });
   } catch (error) {
     console.error("Error in getCourseProgress:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
-  try {
-    const progress = await Progress.findOne({ user: userId, course: courseId }).populate("moduleProgress");
-    if (!progress) {
-      return res.status(404).json({ success: false, message: "Progress not found" });
-    }
-    res.status(200).json({ success: true, progress })
-  } catch (error) {
-    console.error("Error in enrollCourse:", error);
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-})
+
+
 
 const updateVideoProgress = expressAsyncHandler(async (req, res) => {
   // console.log('update video progress controller called');
@@ -806,13 +818,13 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
 
   try {
 
-    const existingCertificate = await Certificate.find({ userId, courseId });
+    const existingCertificate = await Certificate.findOne({ user: userId, course: courseId });
     if (existingCertificate) {
       return res.status(200).json({
         success: true,
-        message: 'Certificate generated successfully.',
+        message: 'Certificate already exists.',
         certificate: existingCertificate
-      })
+      });
     }
     const certificateId = `CERT-${Date.now()}`;
     const awardedDate = new Date().toLocaleDateString('en-US', {
