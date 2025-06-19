@@ -1,6 +1,6 @@
 const express = require('express');
-const { registerUser, loginUser } = require('../controllers/authController');
-const { protect, isEmployee } = require('../middlewares/authmiddleware');
+const { registerUser, loginUser, getEnrolledEmployees, resetPassword } = require('../controllers/authController');
+const { protect, isEmployee, isInstructor } = require('../middlewares/authmiddleware');
 const { getCoursesbyUserId} = require('../controllers/userControllers');
 const { testSubmit, enrollCourse, getCourseProgress, updateVideoProgress, createUserProgressForNewModule, checkVideoOrTestInUserProgressSchema } = require('../controllers/CourseController');
 
@@ -30,6 +30,10 @@ useRoutes.get('/logout', (req, res) => {
 });
 useRoutes.get('/:userId' , protect, getCoursesbyUserId)
 useRoutes.post('/video-progress', protect, updateVideoProgress)
+useRoutes.get('/:courseId/enrolled-employees' ,protect , isInstructor, getEnrolledEmployees)
+
+useRoutes.post('/reset-password' ,resetPassword)
+
 
 useRoutes.post('/check-progress', protect, createUserProgressForNewModule)
 
@@ -37,5 +41,7 @@ useRoutes.post('/check-video-progress', protect, checkVideoOrTestInUserProgressS
 
 
 // useRoutes.post('/enrollCourse' , protect, isEmployee , UserCourseEnrollment)
+
+// useRoutes.post('/send-email' , sendEmailcontroller);
 
 module.exports = useRoutes;
