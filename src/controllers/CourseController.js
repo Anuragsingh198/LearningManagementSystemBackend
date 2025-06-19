@@ -516,7 +516,7 @@ const enrollCourse = expressAsyncHandler(async (req, res) => {
 
 const getCourseProgress = expressAsyncHandler(async (req, res) => {
   const { courseId, userId } = req.body;
-  console.log('get course progress called');
+  // console.log('get course progress called');
 
   try {
     const progress = await Progress.findOne({ user: userId, course: courseId });
@@ -526,7 +526,7 @@ const getCourseProgress = expressAsyncHandler(async (req, res) => {
     }
 
     let completedModulesCount = 0;
-    console.log('completed module count before: ', completedModulesCount);
+    // console.log('completed module count before: ', completedModulesCount);
 
     // Iterate through each moduleProgress to update statuses
     progress.moduleProgress.forEach((module) => {
@@ -562,16 +562,16 @@ const getCourseProgress = expressAsyncHandler(async (req, res) => {
         ? Math.round((completedModulesCount / totalModules) * 100)
         : 0;
 
-    console.log('overall percentage check: ', percentage);
+    // console.log('overall percentage check: ', percentage);
     progress.overallPercentage = percentage;
 
     // Optional: mark course completed if all modules are done
     if (percentage === 100) {
-      console.log('entered if condition');
+      // console.log('entered if condition');
       progress.isCourseCompleted = true;
       progress.status = "completed";
     } else {
-      console.log('entered else condition', percentage);
+      // console.log('entered else condition', percentage);
       progress.isCourseCompleted = false;
       progress.status = "pending"; // or "in-progress"
     }
