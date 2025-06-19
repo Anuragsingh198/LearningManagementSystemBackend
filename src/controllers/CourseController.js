@@ -595,14 +595,14 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
 
   try {
 
-    const existingCertificate = await Certificate.find({ userId, courseId });
-    if (existingCertificate) {
-      return res.status(200).json({
-        success: true,
-        message: 'Certificate generated successfully.',
-        certificate: existingCertificate
-      })
-    }
+    // const existingCertificate = await Certificate.find({ userId, courseId });
+    // if (existingCertificate) {
+    //   return res.status(200).json({
+    //     success: true,
+    //     message: 'Certificate generated successfully.',
+    //     certificate: existingCertificate
+    //   })
+    // }
     const certificateId = `CERT-${Date.now()}`;
     const awardedDate = new Date().toLocaleDateString('en-US', {
       year: 'numeric',
