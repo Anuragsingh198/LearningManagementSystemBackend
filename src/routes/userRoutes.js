@@ -1,5 +1,5 @@
 const express = require('express');
-const { registerUser, loginUser, getEnrolledEmployees, resetPassword } = require('../controllers/authController');
+const { registerUser, loginUser, getEnrolledEmployees, resetPassword, generateOtpHandler, verifyOtpHandler } = require('../controllers/authController');
 const { protect, isEmployee, isInstructor } = require('../middlewares/authmiddleware');
 const { getCoursesbyUserId} = require('../controllers/userControllers');
 const { testSubmit, enrollCourse, getCourseProgress, updateVideoProgress, createUserProgressForNewModule, checkVideoOrTestInUserProgressSchema } = require('../controllers/CourseController');
@@ -38,6 +38,14 @@ useRoutes.post('/reset-password' ,resetPassword)
 useRoutes.post('/check-progress', protect, createUserProgressForNewModule)
 
 useRoutes.post('/check-video-progress', protect, checkVideoOrTestInUserProgressSchema)
+
+useRoutes.post('/generate-otp', generateOtpHandler)
+
+useRoutes.post('/verify-otp', verifyOtpHandler)
+
+
+
+
 
 
 // useRoutes.post('/enrollCourse' , protect, isEmployee , UserCourseEnrollment)

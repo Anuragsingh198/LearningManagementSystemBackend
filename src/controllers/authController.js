@@ -6,6 +6,8 @@ const expressAsyncHandler = require('express-async-handler');
 const Otp = require('../models/otp');
 const Progress = require('../models/CourseSchemas/courseSatusModel');
 const Course = require('../models/CourseSchemas/courseModel');
+const { otpTemplate } = require('../utils/emailhtmls');
+const bcrypt = require('bcrypt')
 
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -178,7 +180,11 @@ const getEnrolledEmployees = expressAsyncHandler(async (req, res) => {
 
 
 const resetPassword = expressAsyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+     console.log('req. body is for reset password:', req.password);
+  
+    const { email, password } = req.body;
+     console.log('resetting password:', { email, password });
+
   try {
     if (!email || !password) {
       return res.status(400).json({ success: false, message: "Email and password are required" });
@@ -187,9 +193,7 @@ const resetPassword = expressAsyncHandler(async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-    user.password = hashedPassword;
+    user.password = password;
     await user.save();
     return res.status(200).json({ success: true, message: "Password changed successfully" });
   } catch (error) {
