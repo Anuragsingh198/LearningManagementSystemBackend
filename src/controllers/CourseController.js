@@ -535,8 +535,11 @@ const getCourseProgress = expressAsyncHandler(async (req, res) => {
 
     // Iterate through each moduleProgress to update statuses
     progress.moduleProgress.forEach((module) => {
+      //  if (module.status === "completed") return;
       const totalVideos = module.videoProgress.length;
       const totalTests = module.testStatus.length;
+      console.log('total number of completed videos are: ', totalVideos)
+      console.log('total number of completed tests are: ', totalTests)
 
       const completedVideos = module.videoProgress.filter(
         (video) => video.status === "completed"
@@ -546,8 +549,15 @@ const getCourseProgress = expressAsyncHandler(async (req, res) => {
         (test) => test.isCompleted === true
       ).length;
 
-      const allVideosCompleted = totalVideos > 0 && completedVideos === totalVideos;
-      const allTestsCompleted = totalTests > 0 && completedTests === totalTests;
+      console.log('number of completed videos are: ', completedVideos)
+      console.log('number of completed tests are: ', completedTests)
+
+
+      const allVideosCompleted = completedVideos === totalVideos;
+      const allTestsCompleted = completedTests === totalTests;
+
+      console.log('boolean value for allVideoCompleted is: ', allVideosCompleted)
+      console.log('boolean value for allTestCompleted is: ', allTestsCompleted)
 
       if (allVideosCompleted && allTestsCompleted) {
         module.status = "completed";
@@ -578,7 +588,7 @@ const getCourseProgress = expressAsyncHandler(async (req, res) => {
     } else {
       // console.log('entered else condition', percentage);
       progress.isCourseCompleted = false;
-      progress.status = "pending"; // or "in-progress"
+      progress.status = "pending"; 
     }
 
     await progress.save();

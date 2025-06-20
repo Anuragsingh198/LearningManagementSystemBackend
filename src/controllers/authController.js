@@ -60,7 +60,7 @@ const  loginUser=  asyncHandler(async(req, res)=>{
             employeeId:user.employeeId ||" ",
             token: generateToken(user._id),
         }});
-        sendEmail('anuragsingh.bisen@ielektron.com' , ' hi this is test email')
+        // sendEmail('anuragsingh.bisen@ielektron.com' , ' hi this is test email')
     } else {
         res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
