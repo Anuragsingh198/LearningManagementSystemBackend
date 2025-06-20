@@ -13,8 +13,7 @@ const puppeteer = require('puppeteer');
 const fs = require('fs')
 const path = require('path');
 const Certificate = require("../models/certificateSchema");
-const os = require('os');
-
+const { uploadToAzureBlob } = require("../utils/azureStore");
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
@@ -24,38 +23,15 @@ const createCourse = expressAsyncHandler(async (req, res) => {
     const file = req.file;
 
     if (!file) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Thumbnail is required" });
+      return res.status(400).json({ success: false, message: "Thumbnail is required" });
     }
-
-    const streamUpload = (fileBuffer) => {
-      return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          {
-            folder: "course_thumbnails",
-            resource_type: "image",
-          },
-          (error, result) => {
-            if (result) resolve(result);
-            else reject(error);
-          }
-        );
-        streamifier.createReadStream(fileBuffer).pipe(stream);
-      });
-    };
-
-    const uploadResult = await streamUpload(file.buffer);
 
     const user = await User.findById(req.user._id);
     if (!user || user.role !== "instructor") {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Only instructors can create courses",
-        });
+      return res.status(403).json({ success: false, message: "Only instructors can create courses" });
     }
+
+    const thumbnailUrl = await uploadToAzureBlob(file.buffer, file.originalname, file.mimetype);
 
     const course = await Course.create({
       title,
@@ -64,7 +40,7 @@ const createCourse = expressAsyncHandler(async (req, res) => {
       price,
       instructor: user._id,
       instructorName: user.name,
-      thumbnail: uploadResult.secure_url,
+      thumbnail: thumbnailUrl,
       compulsory: compulsory,
     });
 
@@ -74,9 +50,7 @@ const createCourse = expressAsyncHandler(async (req, res) => {
     res.status(201).json({ success: true, course });
   } catch (error) {
     console.error("Error in createCourse:", error);
-    res
-      .status(500)
-      .json({ success: false, message: "Server error while creating course" });
+    res.status(500).json({ success: false, message: "Server error while creating course" });
   }
 });
 
@@ -133,46 +107,28 @@ const createModule = expressAsyncHandler(async (req, res) => {
 
 const createVideo = expressAsyncHandler(async (req, res) => {
   const { title, description, courseId, moduleId, duration } = req.body;
-  
-  if (!title || !description || !courseId || !moduleId || !duration) {
-    return res
-      .status(400)
-      .json({ success: false, message: "All fields are required" });
-  }
 
-  if (!req.file) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Video file is required" });
+  if (!title || !description || !courseId || !moduleId || !duration || !req.file) {
+    return res.status(400).json({ success: false, message: "All fields are required" });
   }
 
   const user = await User.findById(req.user._id);
   if (!user || user.role !== "instructor") {
-    return res
-      .status(403)
-      .json({ success: false, message: "Only instructors can upload videos" });
+    return res.status(403).json({ success: false, message: "Only instructors can upload videos" });
   }
 
   const course = await Course.findById(courseId);
   const module = await Module.findById(moduleId);
   if (!course || !module) {
-    return res
-      .status(404)
-      .json({ success: false, message: "Course or module not found" });
+    return res.status(404).json({ success: false, message: "Course or module not found" });
   }
 
-  const uploadResult = await new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      { resource_type: "video", folder: "LMS_videos" },
-      (error, result) => (error ? reject(error) : resolve(result))
-    );
-    streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
-  });
+  const videoUrl = await uploadToAzureBlob(req.file.buffer, req.file.originalname, req.file.mimetype);
 
   const video = await Video.create({
     title,
     description,
-    url: uploadResult.secure_url,
+    url: videoUrl,
     course: courseId,
     module: moduleId,
     uploadedBy: user._id,
@@ -184,7 +140,6 @@ const createVideo = expressAsyncHandler(async (req, res) => {
 
   res.status(201).json({ success: true, video });
 });
-
 
 
 const createTest = expressAsyncHandler(async (req, res) => {
@@ -841,6 +796,7 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
         certificate: existingCertificate
       });
     }
+
     const certificateId = `CERT-${Date.now()}`;
     const awardedDate = new Date().toLocaleDateString('en-US', {
       year: 'numeric',
@@ -876,46 +832,20 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
     });
     await browser.close();
 
-    const cloudinaryUpload = () => {
-      return new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          {
-            resource_type: 'raw',
-            folder: 'certificates',
-            public_id: certificateId,
-            format: 'pdf',
-            type: 'upload',
-          },
-          (error, result) => {
-            if (error) {
-              console.error('Cloudinary Upload Error:', error);
-              reject(error);
-            } else {
-              resolve(result);
-            }
-          }
-        );
-
-        const stream = require('stream');
-        const bufferStream = new stream.PassThrough();
-        bufferStream.end(pdfBuffer);
-        bufferStream.pipe(uploadStream);
-      });
-    };
-
-    const cloudinaryResult = await cloudinaryUpload();
+    const azureUrl = await uploadToAzureBlob(pdfBuffer, `${certificateId}.pdf`, 'application/pdf');
 
     const newCertificate = await Certificate.create({
       user: userId,
       course: courseId,
-      certificateUrl: cloudinaryResult.secure_url,
+      certificateUrl: azureUrl,
       issueDate: new Date(),
       certificateType,
       isGenerated: true
     });
+
     res.status(200).json({
       success: true,
-      message: 'Certificate generated successfully.',
+      message: 'Certificate generated and uploaded to Azure successfully.',
       certificate: newCertificate
     });
 
@@ -924,7 +854,6 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
     return res.status(500).json({ success: false, message: 'Error generating certificate' });
   }
 });
-
 
 module.exports = {
   createCourse,
