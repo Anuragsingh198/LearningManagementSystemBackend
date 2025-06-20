@@ -563,6 +563,7 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
         certificate: existingCertificate
       })
     }
+
     const certificateId = `CERT-${Date.now()}`;
     const awardedDate = new Date().toLocaleDateString('en-US', {
       year: 'numeric',
@@ -598,46 +599,20 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
     });
     await browser.close();
 
-    const cloudinaryUpload = () => {
-      return new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          {
-            resource_type: 'raw',
-            folder: 'certificates',
-            public_id: certificateId,
-            format: 'pdf',
-            type: 'upload',
-          },
-          (error, result) => {
-            if (error) {
-              console.error('Cloudinary Upload Error:', error);
-              reject(error);
-            } else {
-              resolve(result);
-            }
-          }
-        );
-
-        const stream = require('stream');
-        const bufferStream = new stream.PassThrough();
-        bufferStream.end(pdfBuffer);
-        bufferStream.pipe(uploadStream);
-      });
-    };
-
-    const cloudinaryResult = await cloudinaryUpload();
+    const azureUrl = await uploadToAzureBlob(pdfBuffer, `${certificateId}.pdf`, 'application/pdf');
 
     const newCertificate = await Certificate.create({
       user: userId,
       course: courseId,
-      certificateUrl: cloudinaryResult.secure_url,
+      certificateUrl: azureUrl,
       issueDate: new Date(),
       certificateType,
       isGenerated: true
     });
+
     res.status(200).json({
       success: true,
-      message: 'Certificate generated successfully.',
+      message: 'Certificate generated and uploaded to Azure successfully.',
       certificate: newCertificate
     });
 
@@ -646,7 +621,6 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
     return res.status(500).json({ success: false, message: 'Error generating certificate' });
   }
 });
-
 
 module.exports = {
   createCourse,
