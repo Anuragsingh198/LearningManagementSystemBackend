@@ -44,7 +44,7 @@ async function sendEmail(recipientEmail, descriptionHtml) {
 
     const emailMsg = {
       message: {
-        subject: "C2DeVal",
+        subject: "Digividhya",
         body: {
           contentType: "HTML",
           content: emailBody,
