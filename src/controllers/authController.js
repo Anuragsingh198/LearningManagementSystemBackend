@@ -10,60 +10,79 @@ const { otpTemplate } = require('../utils/emailhtmls');
 const bcrypt = require('bcrypt')
 
 const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, {
-        expiresIn: '30d',
-    });
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: '30d',
+  });
 };
 
 
 const registerUser = asyncHandler(async (req, res) => {
-    const { name, email, password, userType:role , employeeId } = req.body;
-     console.log('Registering user:', { name, email, role });
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-        return res.status(400).json({ success: false, message: 'User already exists' });
-    }
-    const user = await User.create({
-        name,
-        email,
-        password,
-        role ,
-        employeeId
+  const { name, email, password, userType: role, employeeId } = req.body;
+  console.log('Registering user:', { name, email, role });
+  if (!email.endsWith('@ielektron.com')) {
+    return res.status(403).json({
+      success: false,
+      message: 'This email ID is not allowed. Please use your organization email ID.'
     });
-    if (user) {
-        res.status(201).json( {success: true, user: {
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            courses:user.courses,
-            employeeId:user.employeeId,
-            token: generateToken(user._id),
-        }});
-        console.log('User registered successfully:', user);
-    } else {
-        res.status(400).json({ success: false, message: 'Invalid user data' });
-    }
+  }
+  const userExists = await User.findOne({ email });
+  if (userExists) {
+    return res.status(400).json({ success: false, message: 'User already exists' });
+  }
+  email = email.toLowerCase();
+  const user = await User.create({
+    name,
+    email,
+    password,
+    role,
+    employeeId
+  });
+  if (user) {
+    res.status(201).json({
+      success: true, user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        courses: user.courses,
+        employeeId: user.employeeId,
+        token: generateToken(user._id),
+      }
+    });
+    console.log('User registered successfully:', user);
+  } else {
+    res.status(400).json({ success: false, message: 'Invalid user data' });
+  }
 }
 );
 
-const  loginUser=  asyncHandler(async(req, res)=>{
-    const {email , password} =   req.body;
-    const user = await User.findOne({ email });
-    if (user && (await user.matchPassword(password))) {
-        res.json( {success: true, user: {
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            courses:user.courses,
-            employeeId:user.employeeId ||" ",
-            token: generateToken(user._id),
-        }});
-        // sendEmail('anuragsingh.bisen@ielektron.com' , ' hi this is test email')
-    } else {
-        res.status(401).json({ success: false, message: 'Invalid email or password' });
-    }
+const loginUser = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email.endsWith('@ielektron.com')) {
+    return res.status(403).json({
+      success: false,
+      message: 'This email ID is not allowed. Please use your organization email ID.'
+    });
+  }
+  email = email.toLowerCase();
+  const user = await User.findOne({ email });
+  if (user && (await user.matchPassword(password))) {
+    res.json({
+      success: true, user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        courses: user.courses,
+        employeeId: user.employeeId || " ",
+        token: generateToken(user._id),
+      }
+    });
+    // sendEmail('anuragsingh.bisen@ielektron.com' , ' hi this is test email')
+  } else {
+    res.status(401).json({ success: false, message: 'Invalid email or password' });
+  }
 });
 
 
@@ -75,10 +94,23 @@ const generateOtpHandler = expressAsyncHandler(async (req, res) => {
   if (!email) {
     return res.status(400).json({ success: false, message: "Email is required." });
   }
+  console.log("email is sjakbvsjkdv", email)
+  if (!email.endsWith('@ielektron.com')) {
+    console.log("endsWith wjnanvadn")
+    return res.status(403).json({
+      success: false,
+      message: 'This email ID is not allowed. Please use your organization email ID.'
+    });
+  }
+
+  const userExists = await User.findOne({ email });
+  if (userExists) {
+    return res.status(400).json({ success: false, message: 'User already exists' });
+  }
 
   try {
     const otp = generateOTP();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); 
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     await Otp.findOneAndUpdate(
       { email },
@@ -117,11 +149,11 @@ const verifyOtpHandler = expressAsyncHandler(async (req, res) => {
     }
 
     if (new Date() > record.expiresAt) {
-      await Otp.deleteOne({ email }); 
+      await Otp.deleteOne({ email });
       return res.status(400).json({ success: false, message: "OTP expired." });
     }
 
-    await Otp.deleteOne({ email }); 
+    await Otp.deleteOne({ email });
     res.status(200).json({ success: true, message: "OTP verified successfully." });
   } catch (error) {
     console.error("OTP Verification Error:", error);
@@ -132,7 +164,7 @@ const verifyOtpHandler = expressAsyncHandler(async (req, res) => {
 
 
 const getEnrolledEmployees = expressAsyncHandler(async (req, res) => {
-  const { courseId } = req.params; 
+  const { courseId } = req.params;
   const userId = req.user._id;
 
   try {
@@ -147,7 +179,7 @@ const getEnrolledEmployees = expressAsyncHandler(async (req, res) => {
 
     const showAllStudentData = [];
     const studentCount = course.students.length;
-    const title = course.title; 
+    const title = course.title;
     for (const student of course.students) {
       const progressRecord = await Progress.findOne({
         user: student._id || student,
@@ -180,10 +212,10 @@ const getEnrolledEmployees = expressAsyncHandler(async (req, res) => {
 
 
 const resetPassword = expressAsyncHandler(async (req, res) => {
-     console.log('req. body is for reset password:', req.password);
-  
-    const { email, password } = req.body;
-     console.log('resetting password:', { email, password });
+  console.log('req. body is for reset password:', req.password);
+
+  const { email, password } = req.body;
+  console.log('resetting password:', { email, password });
 
   try {
     if (!email || !password) {
