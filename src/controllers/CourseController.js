@@ -16,7 +16,7 @@ const Certificate = require("../models/certificateSchema");
 const { uploadToAzureBlob } = require("../utils/azureStore");
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
-
+const { chromium } = require('playwright');
 const createCourse = expressAsyncHandler(async (req, res) => {
   try {
     const { title, description, category, price, compulsory } = req.body;
@@ -774,20 +774,96 @@ const checkVideoOrTestInUserProgressSchema = expressAsyncHandler(async (req, res
 
 
 
+// const generateCertificate = expressAsyncHandler(async (req, res) => {
+//   const { name, courseTitle, empId, courseId, certificateType } = req.body;
+//   const userId = req.user._id;
+
+//   if (!mongoose.Types.ObjectId.isValid(courseId)) {
+//     return res.status(400).json({ success: false, message: "Invalid course ID." });
+//   }
+
+//   if (!mongoose.Types.ObjectId.isValid(userId)) {
+//     return res.status(400).json({ success: false, message: "Invalid user ID." });
+//   }
+
+//   try {
+
+//     const existingCertificate = await Certificate.findOne({ user: userId, course: courseId });
+//     if (existingCertificate) {
+//       return res.status(200).json({
+//         success: true,
+//         message: 'Certificate already exists.',
+//         certificate: existingCertificate
+//       });
+//     }
+
+//     const certificateId = `CERT-${Date.now()}`;
+//     const awardedDate = new Date().toLocaleDateString('en-US', {
+//       year: 'numeric',
+//       month: 'long',
+//       day: 'numeric'
+//     });
+
+//     const templatePath = path.join(__dirname, '../templates/certificatetemplate.html');
+//     console.log("Template Path:", templatePath);
+
+//     let html = fs.readFileSync(templatePath, 'utf8');
+
+//     html = html
+//       .replace('Adi Jain', name)
+//       .replace('EMP-789654', empId)
+//       .replace('DV-2024-001', certificateId)
+//       .replace('"Python"', `"${courseTitle}"`)
+//       .replace('June 16, 2025', awardedDate);
+
+//     const browser = await puppeteer.launch();
+//     const page = await browser.newPage();
+//     await page.setContent(html, { waitUntil: 'networkidle0' });
+
+//     const pdfBuffer = await page.pdf({
+//       format: 'A4',
+//       printBackground: true,
+//       margin: {
+//         top: '0px',
+//         right: '0px',
+//         bottom: '0px',
+//         left: '0px'
+//       }
+//     });
+//     await browser.close();
+
+//     const azureUrl = await uploadToAzureBlob(pdfBuffer, `${certificateId}.pdf`, 'application/pdf');
+
+//     const newCertificate = await Certificate.create({
+//       user: userId,
+//       course: courseId,
+//       certificateUrl: azureUrl,
+//       issueDate: new Date(),
+//       certificateType,
+//       isGenerated: true
+//     });
+
+//     res.status(200).json({
+//       success: true,
+//       message: 'Certificate generated and uploaded to Azure successfully.',
+//       certificate: newCertificate
+//     });
+
+//   } catch (error) {
+//     console.error('Certificate generation failed:', error);
+//     return res.status(500).json({ success: false, message: 'Error generating certificate' });
+//   }
+// });
+
 const generateCertificate = expressAsyncHandler(async (req, res) => {
   const { name, courseTitle, empId, courseId, certificateType } = req.body;
   const userId = req.user._id;
 
-  if (!mongoose.Types.ObjectId.isValid(courseId)) {
-    return res.status(400).json({ success: false, message: "Invalid course ID." });
-  }
-
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
-    return res.status(400).json({ success: false, message: "Invalid user ID." });
+  if (!mongoose.Types.ObjectId.isValid(courseId) || !mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ success: false, message: 'Invalid course or user ID.' });
   }
 
   try {
-
     const existingCertificate = await Certificate.findOne({ user: userId, course: courseId });
     if (existingCertificate) {
       return res.status(200).json({
@@ -805,8 +881,6 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
     });
 
     const templatePath = path.join(__dirname, '../templates/certificatetemplate.html');
-    console.log("Template Path:", templatePath);
-
     let html = fs.readFileSync(templatePath, 'utf8');
 
     html = html
@@ -816,20 +890,16 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
       .replace('"Python"', `"${courseTitle}"`)
       .replace('June 16, 2025', awardedDate);
 
-    const browser = await puppeteer.launch();
+    const browser = await chromium.launch();
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    await page.setContent(html, { waitUntil: 'load' });
 
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: {
-        top: '0px',
-        right: '0px',
-        bottom: '0px',
-        left: '0px'
-      }
+      margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
     });
+
     await browser.close();
 
     const azureUrl = await uploadToAzureBlob(pdfBuffer, `${certificateId}.pdf`, 'application/pdf');
@@ -851,7 +921,7 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
 
   } catch (error) {
     console.error('Certificate generation failed:', error);
-    return res.status(500).json({ success: false, message: 'Error generating certificate' });
+    res.status(500).json({ success: false, message: 'Error generating certificate' });
   }
 });
 
