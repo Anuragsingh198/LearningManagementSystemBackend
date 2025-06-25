@@ -851,7 +851,7 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
 
   } catch (error) {
     console.error('Certificate generation failed:', error);
-    return res.status(500).json({ success: false, message: 'Error generating certificate' });
+    return res.status(500).json({ success: false, message: 'Error generating certificate', error });
   }
 });
 
