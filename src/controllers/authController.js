@@ -29,10 +29,10 @@ const registerUser = asyncHandler(async (req, res) => {
   if (userExists) {
     return res.status(400).json({ success: false, message: 'User already exists' });
   }
-  email = email.toLowerCase();
+const  lowerEmail = email.toLowerCase();
   const user = await User.create({
     name,
-    email,
+    email:lowerEmail,
     password,
     role,
     employeeId
@@ -65,8 +65,8 @@ const loginUser = asyncHandler(async (req, res) => {
       message: 'This email ID is not allowed. Please use your organization email ID.'
     });
   }
-  email = email.toLowerCase();
-  const user = await User.findOne({ email });
+ const  lowerEmail = email.toLowerCase();
+  const user = await User.findOne({ email: lowerEmail });
   if (user && (await user.matchPassword(password))) {
     res.json({
       success: true, user: {
