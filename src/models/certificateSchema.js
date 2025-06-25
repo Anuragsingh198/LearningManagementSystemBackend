@@ -15,7 +15,7 @@ const certificateSchema =   new mongoose.Schema({
         ref:'Course'
 
     },
-    certificateUrl : {
+    certificateHtml : {
         type:String,
     },
     issueDate:{

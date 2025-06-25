@@ -10,6 +10,7 @@ const streamifier = require("streamifier");
 const cloudinary = require("../utils/cloudinary");
 const mongoose = require("mongoose");
 const puppeteer = require('puppeteer');
+const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
 const fs = require('fs')
 const path = require('path');
 const Certificate = require("../models/certificateSchema");
@@ -859,8 +860,12 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
   const { name, courseTitle, empId, courseId, certificateType } = req.body;
   const userId = req.user._id;
 
-  if (!mongoose.Types.ObjectId.isValid(courseId) || !mongoose.Types.ObjectId.isValid(userId)) {
-    return res.status(400).json({ success: false, message: 'Invalid course or user ID.' });
+  if (!mongoose.Types.ObjectId.isValid(courseId)) {
+    return res.status(400).json({ success: false, message: "Invalid course ID." });
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ success: false, message: "Invalid user ID." });
   }
 
   try {
@@ -872,7 +877,6 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
         certificate: existingCertificate
       });
     }
-
     const certificateId = `CERT-${Date.now()}`;
     const awardedDate = new Date().toLocaleDateString('en-US', {
       year: 'numeric',
@@ -890,38 +894,24 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
       .replace('"Python"', `"${courseTitle}"`)
       .replace('June 16, 2025', awardedDate);
 
-    const browser = await chromium.launch();
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'load' });
-
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
-    });
-
-    await browser.close();
-
-    const azureUrl = await uploadToAzureBlob(pdfBuffer, `${certificateId}.pdf`, 'application/pdf');
-
     const newCertificate = await Certificate.create({
       user: userId,
       course: courseId,
-      certificateUrl: azureUrl,
-      issueDate: new Date(),
       certificateType,
-      isGenerated: true
+      issueDate: new Date(),
+      isGenerated: true,
+      certificateHtml: html, 
     });
 
     res.status(200).json({
       success: true,
-      message: 'Certificate generated and uploaded to Azure successfully.',
+      message: 'Certificate HTML generated and stored in database successfully.',
       certificate: newCertificate
     });
 
   } catch (error) {
     console.error('Certificate generation failed:', error);
-    return res.status(500).json({ success: false, message: 'Error generating certificate', error });
+    res.status(500).json({ success: false, message: 'Error generating certificate' });
   }
 });
 
