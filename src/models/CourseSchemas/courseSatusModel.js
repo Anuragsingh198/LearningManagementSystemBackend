@@ -72,7 +72,19 @@ const userProgressSchema = new mongoose.Schema({
   isCourseCompleted: {
     type: Boolean,
     default: false
-  }
+  },
+  remainingDays:{
+    type:Number,
+    default:0
+  },
+  enrolledDate: {
+  type: Date,
+  default: Date.now
+},
+completionDate: {
+  type: Date,
+  default: Date.now
+}
 }, {
   timestamps: true
 });

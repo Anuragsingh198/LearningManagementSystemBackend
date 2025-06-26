@@ -6,23 +6,15 @@ const Test = require("../models/CourseSchemas/testModel");
 const User = require("../models/users");
 const multer = require("multer");
 const Progress = require("../models/CourseSchemas/courseSatusModel");
-const streamifier = require("streamifier");
-const cloudinary = require("../utils/cloudinary");
 const mongoose = require("mongoose");
-const puppeteer = require('puppeteer');
-const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
 const fs = require('fs')
 const path = require('path');
 const Certificate = require("../models/certificateSchema");
 const { uploadToAzureBlob } = require("../utils/azureStore");
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
-const { chromium } = require('playwright');
 const createCourse = expressAsyncHandler(async (req, res) => {
   try {
-    const { title, description, category, price, compulsory } = req.body;
+    const { title, description, category, price, compulsory , courseDuration , remark} = req.body;
     const file = req.file;
-
     if (!file) {
       return res.status(400).json({ success: false, message: "Thumbnail is required" });
     }
@@ -43,7 +35,10 @@ const createCourse = expressAsyncHandler(async (req, res) => {
       instructorName: user.name,
       thumbnail: thumbnailUrl,
       compulsory: compulsory,
+      courseDuration:courseDuration,
+      remark:remark,
     });
+
 
     user.courses.push(course._id);
     await user.save();
@@ -377,42 +372,29 @@ const enrollCourse = expressAsyncHandler(async (req, res) => {
   const userId = req.user._id;
 
   if (!mongoose.Types.ObjectId.isValid(courseId)) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Invalid course ID." });
+    return res.status(400).json({ success: false, message: "Invalid course ID." });
   }
   if (!mongoose.Types.ObjectId.isValid(userId)) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Invalid user ID." });
+    return res.status(400).json({ success: false, message: "Invalid user ID." });
   }
 
   try {
     const course = await Course.findById(courseId).populate("modules");
     if (!course) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Course not found" });
+      return res.status(404).json({ success: false, message: "Course not found" });
     }
+
+    const durationInDays = course.courseDuration || 30;
+    const completionDate = new Date(Date.now() + durationInDays * 24 * 60 * 60 * 1000);
 
     const user = await User.findById(userId);
     if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    const existingProgress = await Progress.findOne({
-      course: courseId,
-      user: userId,
-    });
+    const existingProgress = await Progress.findOne({ course: courseId, user: userId });
     if (existingProgress) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "User already enrolled in this course",
-        });
+      return res.status(400).json({ success: false, message: "User already enrolled in this course" });
     }
 
     const moduleProgressPromises = course.modules.map(async (module) => {
@@ -451,6 +433,8 @@ const enrollCourse = expressAsyncHandler(async (req, res) => {
       overallPercentage: 0,
       isCourseCompleted: false,
       moduleProgress,
+      completionDate,
+      remainingDays: durationInDays,
     });
 
     await newProgress.save();
@@ -465,9 +449,7 @@ const enrollCourse = expressAsyncHandler(async (req, res) => {
       await user.save();
     }
 
-    res
-      .status(200)
-      .json({ success: true, message: "Course enrolled successfully." });
+    res.status(200).json({ success: true, message: "Course enrolled successfully." });
   } catch (error) {
     console.error("Error in enrollCourse:", error);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -477,7 +459,6 @@ const enrollCourse = expressAsyncHandler(async (req, res) => {
 
 const getCourseProgress = expressAsyncHandler(async (req, res) => {
   const { courseId, userId } = req.body;
-  // console.log('get course progress called');
 
   try {
     const progress = await Progress.findOne({ user: userId, course: courseId });
@@ -487,15 +468,10 @@ const getCourseProgress = expressAsyncHandler(async (req, res) => {
     }
 
     let completedModulesCount = 0;
-    // console.log('completed module count before: ', completedModulesCount);
 
-    // Iterate through each moduleProgress to update statuses
     progress.moduleProgress.forEach((module) => {
-      //  if (module.status === "completed") return;
       const totalVideos = module.videoProgress.length;
       const totalTests = module.testStatus.length;
-      console.log('total number of completed videos are: ', totalVideos)
-      console.log('total number of completed tests are: ', totalTests)
 
       const completedVideos = module.videoProgress.filter(
         (video) => video.status === "completed"
@@ -505,20 +481,12 @@ const getCourseProgress = expressAsyncHandler(async (req, res) => {
         (test) => test.isCompleted === true
       ).length;
 
-      console.log('number of completed videos are: ', completedVideos)
-      console.log('number of completed tests are: ', completedTests)
-
-
       const allVideosCompleted = completedVideos === totalVideos;
       const allTestsCompleted = completedTests === totalTests;
-
-      console.log('boolean value for allVideoCompleted is: ', allVideosCompleted)
-      console.log('boolean value for allTestCompleted is: ', allTestsCompleted)
 
       if (allVideosCompleted && allTestsCompleted) {
         module.status = "completed";
         completedModulesCount += 1;
-        console.log('completed module count incremented:', completedModulesCount);
       } else if (completedVideos === 0 && completedTests === 0) {
         module.status = "not-started";
       } else {
@@ -526,25 +494,31 @@ const getCourseProgress = expressAsyncHandler(async (req, res) => {
       }
     });
 
-
     const totalModules = progress.moduleProgress.length;
     const percentage =
       totalModules > 0
         ? Math.round((completedModulesCount / totalModules) * 100)
         : 0;
 
-    // console.log('overall percentage check: ', percentage);
     progress.overallPercentage = percentage;
 
-    // Optional: mark course completed if all modules are done
+    const today = new Date();
+    const completionDate = new Date(progress.completionDate);
+    const timeDiff = completionDate.getTime() - today.getTime();
+    const remainingDays = Math.max(Math.ceil(timeDiff / (1000 * 60 * 60 * 24)), 0);
+
+    progress.remainingDays = remainingDays;
+
     if (percentage === 100) {
-      // console.log('entered if condition');
       progress.isCourseCompleted = true;
       progress.status = "completed";
     } else {
-      // console.log('entered else condition', percentage);
       progress.isCourseCompleted = false;
-      progress.status = "pending"; 
+      if (remainingDays === 0) {
+        progress.status = "expired";
+      } else {
+        progress.status = "pending";
+      }
     }
 
     await progress.save();
@@ -559,6 +533,7 @@ const getCourseProgress = expressAsyncHandler(async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 
 
@@ -772,89 +747,6 @@ const checkVideoOrTestInUserProgressSchema = expressAsyncHandler(async (req, res
 
 
 });
-
-
-
-// const generateCertificate = expressAsyncHandler(async (req, res) => {
-//   const { name, courseTitle, empId, courseId, certificateType } = req.body;
-//   const userId = req.user._id;
-
-//   if (!mongoose.Types.ObjectId.isValid(courseId)) {
-//     return res.status(400).json({ success: false, message: "Invalid course ID." });
-//   }
-
-//   if (!mongoose.Types.ObjectId.isValid(userId)) {
-//     return res.status(400).json({ success: false, message: "Invalid user ID." });
-//   }
-
-//   try {
-
-//     const existingCertificate = await Certificate.findOne({ user: userId, course: courseId });
-//     if (existingCertificate) {
-//       return res.status(200).json({
-//         success: true,
-//         message: 'Certificate already exists.',
-//         certificate: existingCertificate
-//       });
-//     }
-
-//     const certificateId = `CERT-${Date.now()}`;
-//     const awardedDate = new Date().toLocaleDateString('en-US', {
-//       year: 'numeric',
-//       month: 'long',
-//       day: 'numeric'
-//     });
-
-//     const templatePath = path.join(__dirname, '../templates/certificatetemplate.html');
-//     console.log("Template Path:", templatePath);
-
-//     let html = fs.readFileSync(templatePath, 'utf8');
-
-//     html = html
-//       .replace('Adi Jain', name)
-//       .replace('EMP-789654', empId)
-//       .replace('DV-2024-001', certificateId)
-//       .replace('"Python"', `"${courseTitle}"`)
-//       .replace('June 16, 2025', awardedDate);
-
-//     const browser = await puppeteer.launch();
-//     const page = await browser.newPage();
-//     await page.setContent(html, { waitUntil: 'networkidle0' });
-
-//     const pdfBuffer = await page.pdf({
-//       format: 'A4',
-//       printBackground: true,
-//       margin: {
-//         top: '0px',
-//         right: '0px',
-//         bottom: '0px',
-//         left: '0px'
-//       }
-//     });
-//     await browser.close();
-
-//     const azureUrl = await uploadToAzureBlob(pdfBuffer, `${certificateId}.pdf`, 'application/pdf');
-
-//     const newCertificate = await Certificate.create({
-//       user: userId,
-//       course: courseId,
-//       certificateUrl: azureUrl,
-//       issueDate: new Date(),
-//       certificateType,
-//       isGenerated: true
-//     });
-
-//     res.status(200).json({
-//       success: true,
-//       message: 'Certificate generated and uploaded to Azure successfully.',
-//       certificate: newCertificate
-//     });
-
-//   } catch (error) {
-//     console.error('Certificate generation failed:', error);
-//     return res.status(500).json({ success: false, message: 'Error generating certificate' });
-//   }
-// });
 
 const generateCertificate = expressAsyncHandler(async (req, res) => {
   const { name, courseTitle, empId, courseId, certificateType } = req.body;

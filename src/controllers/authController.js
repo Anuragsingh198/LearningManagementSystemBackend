@@ -94,6 +94,7 @@ const generateOtpHandler = expressAsyncHandler(async (req, res) => {
   if (!email) {
     return res.status(400).json({ success: false, message: "Email is required." });
   }
+  
   console.log("email is sjakbvsjkdv", email)
   if (!email.endsWith('@ielektron.com')) {
     console.log("endsWith wjnanvadn")

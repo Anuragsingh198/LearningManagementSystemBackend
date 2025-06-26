@@ -11,7 +11,7 @@ courseRoutes.post('/course-module', protect, isInstructor, createModule);
 courseRoutes.post('/create-course', protect, isInstructor, upload.single('thumbnail'), createCourse);
 courseRoutes.post('/create-video', protect, isInstructor, upload.single('video'), createVideo);   
 courseRoutes.post('/addtest', protect, isInstructor, createTest);
-courseRoutes.get('/', protect, getCourses);
+courseRoutes.get('/', getCourses);
 courseRoutes.get('/modules/:courseId' , getModulesByCourseId)
 courseRoutes.get('/:courseId' , getCourseByCourseId)
 courseRoutes.post('/generate-certificate' ,protect , isEmployee ,generateCertificate)
