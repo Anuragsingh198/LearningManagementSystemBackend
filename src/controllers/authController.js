@@ -7,7 +7,8 @@ const Otp = require('../models/otp');
 const Progress = require('../models/CourseSchemas/courseSatusModel');
 const Course = require('../models/CourseSchemas/courseModel');
 const { otpTemplate } = require('../utils/emailhtmls');
-const bcrypt = require('bcrypt')
+const bcrypt = require('bcrypt');
+const e = require('express');
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -89,7 +90,7 @@ const loginUser = asyncHandler(async (req, res) => {
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 const generateOtpHandler = expressAsyncHandler(async (req, res) => {
-  const { email } = req.body;
+  const { email , type } = req.body;
 
   if (!email) {
     return res.status(400).json({ success: false, message: "Email is required." });
@@ -103,10 +104,12 @@ const generateOtpHandler = expressAsyncHandler(async (req, res) => {
       message: 'This email ID is not allowed. Please use your organization email ID.'
     });
   }
-
-  const userExists = await User.findOne({ email });
-  if (userExists) {
-    return res.status(400).json({ success: false, message: 'User already exists' });
+  const newEmail = email.toLowerCase();
+  if(type === 'signup'){
+    const userExists = await User.findOne({ email: newEmail });
+    if (userExists) {
+      return res.status(400).json({ success: false, message: 'User already exists' });
+    }
   }
 
   try {

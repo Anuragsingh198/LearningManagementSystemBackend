@@ -8,6 +8,7 @@ const courseSchema = new mongoose.Schema({
     instructor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, 
     category: { type: String, required: true }, 
     thumbnail: { type: String, required: true },
+    thumbnailBlobName:{type:String, required:true},
     modules: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Module' }],
     students: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     percentageCompleted: { type: Number, default: 0 },

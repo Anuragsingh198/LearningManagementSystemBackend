@@ -13,6 +13,10 @@ const  videoSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    videoBlobName:{
+        type:String,
+        required:true,
+    },
     course: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Course',

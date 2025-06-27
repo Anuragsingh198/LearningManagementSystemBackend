@@ -10,7 +10,8 @@ const mongoose = require("mongoose");
 const fs = require('fs')
 const path = require('path');
 const Certificate = require("../models/certificateSchema");
-const { uploadToAzureBlob } = require("../utils/azureStore");
+const { uploadToAzureBlob, deleteFromAzureBlob } = require("../utils/azureStore");
+
 const createCourse = expressAsyncHandler(async (req, res) => {
   try {
     const { title, description, category, price, compulsory , courseDuration , remark} = req.body;
@@ -24,7 +25,7 @@ const createCourse = expressAsyncHandler(async (req, res) => {
       return res.status(403).json({ success: false, message: "Only instructors can create courses" });
     }
 
-    const thumbnailUrl = await uploadToAzureBlob(file.buffer, file.originalname, file.mimetype);
+    const thumbnail = await uploadToAzureBlob(file.buffer, file.originalname, file.mimetype);
 
     const course = await Course.create({
       title,
@@ -33,7 +34,8 @@ const createCourse = expressAsyncHandler(async (req, res) => {
       price,
       instructor: user._id,
       instructorName: user.name,
-      thumbnail: thumbnailUrl,
+      thumbnail: thumbnail.url,
+      thumbnailBlobName:thumbnail.blobName,
       compulsory: compulsory,
       courseDuration:courseDuration,
       remark:remark,
@@ -119,12 +121,13 @@ const createVideo = expressAsyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: "Course or module not found" });
   }
 
-  const videoUrl = await uploadToAzureBlob(req.file.buffer, req.file.originalname, req.file.mimetype);
-
+  const videoBlob = await uploadToAzureBlob(req.file.buffer, req.file.originalname, req.file.mimetype);
+  console.log("video  blob is : ", videoBlob);
   const video = await Video.create({
     title,
     description,
-    url: videoUrl,
+    url: videoBlob.url,
+    videoBlobName: videoBlob.blobName,
     course: courseId,
     module: moduleId,
     uploadedBy: user._id,
@@ -508,7 +511,6 @@ const getCourseProgress = expressAsyncHandler(async (req, res) => {
     const remainingDays = Math.max(Math.ceil(timeDiff / (1000 * 60 * 60 * 24)), 0);
 
     progress.remainingDays = remainingDays;
-
     if (percentage === 100) {
       progress.isCourseCompleted = true;
       progress.status = "completed";
@@ -748,6 +750,156 @@ const checkVideoOrTestInUserProgressSchema = expressAsyncHandler(async (req, res
 
 });
 
+const  deleteCourse = expressAsyncHandler(async(req, res)=>{
+  const {courseId} = req.params;
+  const userId = req.user._id.toString();
+  console.log("user id id : ", userId);
+  if (!mongoose.Types.ObjectId.isValid(courseId)) {
+    return res.status(400).json({ success: false, message: "Invalid course ID." });
+  }
+  try {
+    const course = await Course.findById(courseId).populate('modules');
+    console.log("course istructor is : " , course.instructor)
+    if (!course) {
+      return res.status(404).json({ success: false, message: "Course not found." });
+    }
+    const instructorId = course.instructor.toString();
+    if (instructorId !== userId) {
+      console.log("this is called ")
+      return res.status(403).json({ success: false, message: "You are not authorized to delete this course." });
+    }
+    
+    for(const modules of course.modules){
+      const  module = await Module.findById(modules._id).populate(['videos', 'tests']);
+      if(module){
+        for(const video of module.videos){
+          await deleteFromAzureBlob( video.videoBlobName);
+          await Video.findByIdAndDelete(video._id);
+        }
+        for(const test of module.tests){
+          await deleteFromAzureBlob( test.testBlobName);
+          await Test.findByIdAndDelete(test._id);
+        }
+      }
+      await Module.findByIdAndDelete(module._id);
+    }
+    await deleteFromAzureBlob( course.thumbnailBlobName);
+    await User.updateMany(  
+      { courses: courseId },
+      { $pull: { courses: courseId } }
+    );
+    await Course.findByIdAndDelete(courseId);
+    await Progress.deleteMany({ course: courseId });
+    res.status(200).json({ success: true, message: "Course deleted successfully." });
+  } catch (error) {
+    console.error("Error deleting course:", error);
+    res.status(500).json({ success: false, message: "Server error." });
+  }
+});
+
+
+const deleteModule = expressAsyncHandler(async (req, res) => {
+  const { moduleId } = req.params;
+  const userId = req.user._id.toString();
+
+  try {
+    const module = await Module.findById(moduleId).populate(['videos', 'tests']);
+    if (!module) {
+      return res.status(404).json({ success: false, message: 'Module not found.' });
+    }
+
+    const course = await Course.findById(module.course);
+    if (!course || course.instructor.toString() !== userId) {
+      return res.status(403).json({ success: false, message: "Not authorized to delete this module." });
+    }
+    for (const video of module.videos) {
+      if (video.videoBlobName) {
+        try {
+          await deleteFromAzureBlob(video.videoBlobName);
+        } catch (err) {
+          console.warn(`Failed to delete video blob: ${video.videoBlobName}`, err.message);
+        }
+      }
+      await Video.findByIdAndDelete(video._id);
+    }
+
+    for (const test of module.tests) {
+      await Test.findByIdAndDelete(test._id);
+    }
+    await Module.findByIdAndDelete(moduleId);
+    await Course.findByIdAndUpdate(module.course, {
+      $pull: { modules: module._id }
+    });
+
+    res.status(200).json({ success: true, message: 'Module deleted successfully.' });
+
+  } catch (error) {
+    console.error("Error deleting module:", error);
+    res.status(500).json({ success: false, message: "Server error." });
+  }
+});
+
+const deleteTest = expressAsyncHandler(async (req, res) => {
+  const { testId } = req.params;
+  const userId = req.user._id.toString();
+
+  try {
+    const test = await Test.findById(testId);
+    if (!test) {
+      return res.status(404).json({ success: false, message: 'Test not found.' });
+    }
+    const module = await Module.findById(test.module);
+    const course = await Course.findById(module?.course);
+    if (!course || course.instructor.toString() !== userId) {
+      return res.status(403).json({ success: false, message: "Not authorized to delete this test." });
+    }
+    await Module.findByIdAndUpdate(test.module, {
+      $pull: { tests: test._id }
+    });
+
+    await Test.findByIdAndDelete(testId);
+
+    res.status(200).json({ success: true, message: 'Test deleted successfully.' });
+
+  } catch (error) {
+    console.error("Error deleting test:", error);
+    res.status(500).json({ success: false, message: "Server error." });
+  }
+});
+const deleteVideo = expressAsyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  const userId = req.user._id.toString();
+  try {
+    const video = await Video.findById(videoId);
+    if (!video) {
+      return res.status(404).json({ success: false, message: 'Video not found' });
+    }
+    const module = await Module.findById(video.module);
+    const course = await Course.findById(module?.course);
+    if (!course || course.instructor.toString() !== userId) {
+      return res.status(403).json({ success: false, message: "Not authorized to delete this video." });
+    }
+    if (video.videoBlobName) {
+      try {
+        await deleteFromAzureBlob(video.videoBlobName);
+      } catch (err) {
+        console.warn(`Failed to delete video blob: ${video.videoBlobName}`, err.message);
+      }
+    }
+    await Module.findByIdAndUpdate(video.module, {
+      $pull: { videos: video._id }
+    });
+    await Video.findByIdAndDelete(videoId);
+    res.status(200).json({ success: true, message: 'Video deleted successfully' });
+
+  } catch (error) {
+    console.error("Error deleting video:", error);
+    res.status(500).json({ success: false, message: "Server error." });
+  }
+});
+
+
+
 const generateCertificate = expressAsyncHandler(async (req, res) => {
   const { name, courseTitle, empId, courseId, certificateType } = req.body;
   const userId = req.user._id;
@@ -823,5 +975,9 @@ module.exports = {
   updateVideoProgress,
   createUserProgressForNewModule,
   checkVideoOrTestInUserProgressSchema,
-  generateCertificate
+  generateCertificate,
+  deleteCourse,
+  deleteVideo,
+  deleteModule,
+  deleteTest,
 };
