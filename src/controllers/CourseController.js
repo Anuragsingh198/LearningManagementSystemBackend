@@ -4,14 +4,17 @@ const Module = require("../models/CourseSchemas/CourseModule");
 const Video = require("../models/CourseSchemas/VideoModel");
 const Test = require("../models/CourseSchemas/testModel");
 const User = require("../models/users");
-const multer = require("multer");
 const Progress = require("../models/CourseSchemas/courseSatusModel");
 const mongoose = require("mongoose");
 const fs = require('fs')
+const tmp = require('tmp');
 const path = require('path');
 const Certificate = require("../models/certificateSchema");
-const { uploadToAzureBlob, deleteFromAzureBlob } = require("../utils/azureStore");
-
+const { uploadToAzureBlob, deleteFromAzureBlob, uploadStreamToAzureBlob } = require("../utils/azureStore");
+const { getVideoDurationInSeconds } = require('get-video-duration');
+const { bufferToStream } = require("../utils/videoBuffer");
+const {upload} = require("../middlewares/uploadMiddleware");
+const { getDurationFromBuffer } = require("../utils/getVideoDuration");
 const createCourse = expressAsyncHandler(async (req, res) => {
   try {
     const { title, description, category, price, compulsory , courseDuration , remark} = req.body;
@@ -103,26 +106,36 @@ const createModule = expressAsyncHandler(async (req, res) => {
   }
 });
 
-const createVideo = expressAsyncHandler(async (req, res) => {
-  const { title, description, courseId, moduleId, duration } = req.body;
 
-  if (!title || !description || !courseId || !moduleId || !duration || !req.file) {
-    return res.status(400).json({ success: false, message: "All fields are required" });
+const createVideo = expressAsyncHandler(async (req, res) => {
+  const { title, description, courseId, moduleId } = req.body;
+
+  if (!req.file || !title || !description || !courseId || !moduleId) {
+    return res.status(400).json({ success: false, message: 'All fields are required' });
   }
 
   const user = await User.findById(req.user._id);
-  if (!user || user.role !== "instructor") {
-    return res.status(403).json({ success: false, message: "Only instructors can upload videos" });
+  if (!user || user.role !== 'instructor') {
+    return res.status(403).json({ success: false, message: 'Only instructors can upload videos' });
   }
 
   const course = await Course.findById(courseId);
   const module = await Module.findById(moduleId);
   if (!course || !module) {
-    return res.status(404).json({ success: false, message: "Course or module not found" });
+    return res.status(404).json({ success: false, message: 'Course or module not found' });
   }
 
-  const videoBlob = await uploadToAzureBlob(req.file.buffer, req.file.originalname, req.file.mimetype);
-  console.log("video  blob is : ", videoBlob);
+  let duration;
+  try {
+    duration = await getDurationFromBuffer(req.file.buffer);
+    console.log('Video duration:', duration);
+  } catch (err) {
+    console.error('Failed to get duration:', err);
+    return res.status(500).json({ success: false, message: 'Failed to get video duration' });
+  }
+  
+  const videoBlob = await uploadStreamToAzureBlob(req.file.buffer, req.file.originalname, req.file.mimetype);
+  console.log('Uploaded video:', videoBlob);
   const video = await Video.create({
     title,
     description,
@@ -240,6 +253,8 @@ const getCourseByCourseId = expressAsyncHandler(async (req, res) => {
   }
 });
 
+
+
 const getVideosByModuleId = expressAsyncHandler(async (req, res) => {
   const { moduleId } = req.params;
 
@@ -286,9 +301,9 @@ const getModuleById = expressAsyncHandler(async (req, res) => {
 
 const testSubmit = expressAsyncHandler(async (req, res) => {
   const { testId, userAnswers, progressId, moduleId } = req.body;
-
+ 
   console.log("testSubmit data:", { testId, userAnswers });
-
+ 
   if (!testId || !userAnswers || !progressId || !moduleId) {
     return res
       .status(400)
@@ -298,34 +313,34 @@ const testSubmit = expressAsyncHandler(async (req, res) => {
           "Test ID, user Answers, Module ID, and Progress ID are required",
       });
   }
-
-
+ 
+ 
   try {
     const test = await Test.findById(testId);
     if (!test)
       return res.status(404).json({ success: false, message: "Test not found" });
-
+ 
     const questions = test.questions;
     if (questions.length === 0)
       return res
         .status(404)
         .json({ success: false, message: "No questions found" });
-
+ 
     let correctCount = 0;
     Object.entries(userAnswers).forEach(([index, answer]) => {
       const i = parseInt(index);
       if (questions[i] && questions[i].correctAnswer === answer) correctCount++;
     });
-
+ 
     const score = correctCount;
     const percentage = (score / questions.length) * 100;
-
+ 
     const progress = await Progress.findById(progressId);
     if (!progress)
       return res
         .status(404)
         .json({ success: false, message: "Progress not found" });
-
+ 
     const module = progress.moduleProgress.find(
       (x) => x.module.toString() === moduleId
     );
@@ -333,7 +348,7 @@ const testSubmit = expressAsyncHandler(async (req, res) => {
       return res
         .status(404)
         .json({ success: false, message: "Module not found" });
-
+ 
     const targetTestData = module.testStatus.find(
       (x) => x.test.toString() === testId
     );
@@ -341,12 +356,13 @@ const testSubmit = expressAsyncHandler(async (req, res) => {
       return res
         .status(404)
         .json({ success: false, message: "Test not found in module" });
-
-
-    targetTestData.isCompleted = percentage >= 75;
+ 
+    if(!targetTestData.isCompleted){
+      targetTestData.isCompleted = percentage >= 75;
+    }
     targetTestData.marksScored = score;
     targetTestData.retakeCount = (targetTestData.retakeCount || 0) + 1;
-
+ 
     if (targetTestData.isCompleted) {
       const allVideosCompleted = module.videoProgress.every(
         (video) => video.status === "completed"
@@ -354,15 +370,15 @@ const testSubmit = expressAsyncHandler(async (req, res) => {
       const allTestsCompleted = module.testStatus.every(
         (test) => test.isCompleted === true
       );
-
+ 
       if (allVideosCompleted && allTestsCompleted) {
         module.status = "completed";
       }
     }
-
-
+ 
+ 
     await progress.save();
-
+ 
     return res.status(200).json({ success: true, score });
   } catch (error) {
     console.error("Error in testSubmit:", error);
@@ -452,6 +468,7 @@ const enrollCourse = expressAsyncHandler(async (req, res) => {
       await user.save();
     }
 
+  
     res.status(200).json({ success: true, message: "Course enrolled successfully." });
   } catch (error) {
     console.error("Error in enrollCourse:", error);
@@ -472,14 +489,13 @@ const getCourseProgress = expressAsyncHandler(async (req, res) => {
 
     let completedModulesCount = 0;
 
-    progress.moduleProgress.forEach((module) => {
+    progress.moduleProgress.forEach(async (module) => {
       const totalVideos = module.videoProgress.length;
       const totalTests = module.testStatus.length;
 
       const completedVideos = module.videoProgress.filter(
         (video) => video.status === "completed"
       ).length;
-
       const completedTests = module.testStatus.filter(
         (test) => test.isCompleted === true
       ).length;
@@ -629,7 +645,6 @@ const createUserProgressForNewModule = expressAsyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: "Module not found" });
   }
 
-  // Prepare videoProgress and testStatus arrays
   const videoProgress = (module.videos || []).map(video => ({
     video: video._id,
     status: "not-started"
@@ -717,6 +732,8 @@ const checkVideoOrTestInUserProgressSchema = expressAsyncHandler(async (req, res
     const testExists = moduleProgress.testStatus.some(
       (test) => test.test.toString() === testId
     );
+  
+
 
     if (testExists) {
       return res.status(200).json({
@@ -790,7 +807,8 @@ const  deleteCourse = expressAsyncHandler(async(req, res)=>{
     );
     await Course.findByIdAndDelete(courseId);
     await Progress.deleteMany({ course: courseId });
-    res.status(200).json({ success: true, message: "Course deleted successfully." });
+
+    res.status(200).json({ success: true, message: "Course deleted successfully."  });
   } catch (error) {
     console.error("Error deleting course:", error);
     res.status(500).json({ success: false, message: "Server error." });
