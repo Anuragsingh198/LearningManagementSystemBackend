@@ -10,7 +10,7 @@ const fs = require('fs')
 const tmp = require('tmp');
 const path = require('path');
 const Certificate = require("../models/certificateSchema");
-const { uploadToAzureBlob, deleteFromAzureBlob, uploadStreamToAzureBlob } = require("../utils/azureStore");
+const { deleteFromAzureBlob, uploadStreamToAzureBlob } = require("../utils/azureStore");
 const { generateBlobSas, generateSasUrl } = require("../utils/generateSasUrl");
 // const { getVideoDurationInSeconds } = require('get-video-duration');
 const { bufferToStream } = require("../utils/videoBuffer");
@@ -29,7 +29,7 @@ const createCourse = expressAsyncHandler(async (req, res) => {
       return res.status(403).json({ success: false, message: "Only instructors can create courses" });
     }
 
-    const thumbnail = await uploadToAzureBlob(file.buffer, file.originalname, file.mimetype);
+    const thumbnail = await uploadStreamToAzureBlob(file.buffer, file.originalname, file.mimetype);
 
     const course = await Course.create({
       title,
