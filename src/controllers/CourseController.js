@@ -11,7 +11,8 @@ const tmp = require('tmp');
 const path = require('path');
 const Certificate = require("../models/certificateSchema");
 const { uploadToAzureBlob, deleteFromAzureBlob, uploadStreamToAzureBlob } = require("../utils/azureStore");
-const { getVideoDurationInSeconds } = require('get-video-duration');
+const { generateBlobSas, generateSasUrl } = require("../utils/generateSasUrl");
+// const { getVideoDurationInSeconds } = require('get-video-duration');
 const { bufferToStream } = require("../utils/videoBuffer");
 const {upload} = require("../middlewares/uploadMiddleware");
 const { getDurationFromBuffer } = require("../utils/getVideoDuration");
@@ -975,7 +976,24 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
     console.error('Certificate generation failed:', error);
     res.status(500).json({ success: false, message: 'Error generating certificate' });
   }
+}); 
+
+const generateSASToken = expressAsyncHandler(async (req, res) => {
+  const blobName = req.params.blobName;
+  
+  console.log("Generating SAS token for blob:", blobName);
+  const hours = parseInt(req.query.hours) || 1;
+  const expiresInMinutes = hours * 60;
+
+  try {
+    const sasToken = await generateSasUrl({ blobName, expiresInMinutes });
+    res.status(200).json({ success: true, sasToken });
+  } catch (error) {
+    console.error('Error generating SAS token:', error);
+    res.status(500).json({ success: false, message: 'Error generating SAS token' });
+  }
 });
+
 
 module.exports = {
   createCourse,
@@ -998,4 +1016,5 @@ module.exports = {
   deleteVideo,
   deleteModule,
   deleteTest,
+  generateSASToken,
 };
