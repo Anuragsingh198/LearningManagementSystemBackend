@@ -166,7 +166,6 @@ const verifyOtpHandler = expressAsyncHandler(async (req, res) => {
 });
 
 
-
 const getEnrolledEmployees = expressAsyncHandler(async (req, res) => {
   const { courseId } = req.params;
   const userId = req.user._id;
@@ -237,6 +236,9 @@ const resetPassword = expressAsyncHandler(async (req, res) => {
     return res.status(500).json({ success: false, message: "Server Error" });
   }
 });
+
+
+
 
 
 module.exports = {

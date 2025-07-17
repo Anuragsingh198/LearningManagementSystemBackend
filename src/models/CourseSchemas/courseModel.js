@@ -15,7 +15,8 @@ const courseSchema = new mongoose.Schema({
     certificate: { type: String, default: '' },
     compulsory: { type: Boolean, default: 'false' },
     courseDuration:{type:Number , default:7},
-    remark:{type:String , default:""}
+    remark:{type:String , default:""},
+    isPublished:{type:Boolean , default:false}
 }, { timestamps: true });
 
 const Course = mongoose.model('Course', courseSchema);

@@ -16,6 +16,11 @@ const { generateBlobSas, generateSasUrl } = require("../utils/generateSasUrl");
 const { bufferToStream } = require("../utils/videoBuffer");
 const {upload} = require("../middlewares/uploadMiddleware");
 const { getDurationFromBuffer } = require("../utils/getVideoDuration");
+const courseProgress = require("../models/courseProgressSchemas/courseProgress");
+const ModuleProgress = require("../models/courseProgressSchemas/moduleProgress");
+const { json } = require("stream/consumers");
+const TestProgress = require("../models/courseProgressSchemas/testProgress");
+const VideoProgress = require("../models/courseProgressSchemas/videoProgress");
 const createCourse = expressAsyncHandler(async (req, res) => {
   try {
     const { title, description, category, price, compulsory , courseDuration , remark} = req.body;
@@ -232,7 +237,8 @@ const getModulesByCourseId = expressAsyncHandler(async (req, res) => {
 });
 
 const getCourseByCourseId = expressAsyncHandler(async (req, res) => {
-  const { courseId } = req.params;
+  const {courseId } = req.params;
+  console.log("this is the  course id : " , courseId);
   if (!courseId) {
     return res
       .status(400)
@@ -386,97 +392,6 @@ const testSubmit = expressAsyncHandler(async (req, res) => {
     return res.status(500).json({ success: false, message: "Server error" });
   }
 });
-
-const enrollCourse = expressAsyncHandler(async (req, res) => {
-  const { courseId } = req.body;
-  const userId = req.user._id;
-
-  if (!mongoose.Types.ObjectId.isValid(courseId)) {
-    return res.status(400).json({ success: false, message: "Invalid course ID." });
-  }
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
-    return res.status(400).json({ success: false, message: "Invalid user ID." });
-  }
-
-  try {
-    const course = await Course.findById(courseId).populate("modules");
-    if (!course) {
-      return res.status(404).json({ success: false, message: "Course not found" });
-    }
-
-    const durationInDays = course.courseDuration || 30;
-    const completionDate = new Date(Date.now() + durationInDays * 24 * 60 * 60 * 1000);
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
-
-    const existingProgress = await Progress.findOne({ course: courseId, user: userId });
-    if (existingProgress) {
-      return res.status(400).json({ success: false, message: "User already enrolled in this course" });
-    }
-
-    const moduleProgressPromises = course.modules.map(async (module) => {
-      const fullModule = await Module.findById(module._id)
-        .populate("videos")
-        .populate("tests");
-
-      const videoProgress = fullModule.videos.map((video) => ({
-        video: video._id,
-        status: "not-started",
-      }));
-
-      const testStatus = fullModule.tests.map((test) => ({
-        test: test._id,
-        isCompleted: false,
-        retakeCount: 0,
-        marksScored: 0,
-      }));
-
-      return {
-        module: fullModule._id,
-        status: "not-started",
-        videoIndex: 0,
-        percentageCompleted: 0,
-        videoProgress,
-        testStatus,
-      };
-    });
-
-    const moduleProgress = await Promise.all(moduleProgressPromises);
-
-    const newProgress = new Progress({
-      user: userId,
-      course: courseId,
-      status: "enrolled",
-      overallPercentage: 0,
-      isCourseCompleted: false,
-      moduleProgress,
-      completionDate,
-      remainingDays: durationInDays,
-    });
-
-    await newProgress.save();
-
-    if (!course.students.includes(userId)) {
-      course.students.push(userId);
-      await course.save();
-    }
-
-    if (!user.courses.includes(courseId)) {
-      user.courses.push(courseId);
-      await user.save();
-    }
-
-  
-    res.status(200).json({ success: true, message: "Course enrolled successfully." });
-  } catch (error) {
-    console.error("Error in enrollCourse:", error);
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
 
 const getCourseProgress = expressAsyncHandler(async (req, res) => {
   const { courseId, userId } = req.body;
@@ -1006,7 +921,6 @@ module.exports = {
   getVideosByModuleId,
   getModuleById,
   testSubmit,
-  enrollCourse,
   getCourseProgress,
   updateVideoProgress,
   createUserProgressForNewModule,
