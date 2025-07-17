@@ -241,42 +241,44 @@ const getCourseWithProgress = expressAsyncHandler(async (req, res) => {
 const videoProgress = expressAsyncHandler(async (req, res) => {
   const { courseId, videoId, moduleId, videoData } = req.body;
   const userId = req.user._id;
-
+  console.log("This is the  data form  videoProgres: ",courseId,videoId , moduleId );
   try {
-    const existingProgress = await VideoProgress.findOne({ userId, courseId, moduleId, videoId });
-    if (existingProgress) {
-      return res.status(400).json({
-        success: false,
-        message: 'Video progress already exists.',
-        videoProgress: existingProgress,
-        alreadyInitialized: true
+    let existingProgress = await VideoProgress.findOne({ userId, courseId, moduleId, videoId });
+
+    if (!existingProgress) {
+      existingProgress = new VideoProgress({
+        userId,
+        courseId,
+        moduleId,
+        videoId,
+        videoDuration: videoData?.videoDuration || 0,
+        status: 'in-progress',
+        lastWatchedTime: videoData?.lastWatchedTime || 0,
       });
+      await existingProgress.save();
     }
 
-    const newVideoProgress = new VideoProgress({
-      userId,
-      courseId,
-      moduleId,
-      videoId,
-      videoDuration: videoData?.videoDuration || 0,
-      status: 'in-progress',
-      lastWatchedTime: videoData?.lastWatchedTime || 0
-    });
 
-    await newVideoProgress.save();
-
-    return res.status(201).json({
+    const courseProgress = await CourseProgress.findOne({ userId, courseId });
+    const moduleProgress = await ModuleProgress.find({ userId, courseId });
+    const videoProgress = await VideoProgress.find({ userId, courseId });
+    const testProgress = await TestProgress.find({ userId, courseId });
+     console.log("this is  the  video data : video progress data ",existingProgress )
+    return res.status(200).json({
       success: true,
-      message: 'Video progress initialized successfully',
-      videoProgress: newVideoProgress,
-      alreadyInitialized: false
+      message: 'Video progress handled successfully',
+      videoProgress: existingProgress,
+      courseProgress,
+      moduleProgress,
+      testProgress,
+      videoProgressList: videoProgress,
     });
-
   } catch (error) {
     console.error('Error in videoProgress:', error);
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
 
 
 const testProgress = expressAsyncHandler(async (req, res) => {
