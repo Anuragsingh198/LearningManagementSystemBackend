@@ -308,86 +308,84 @@ const getModuleById = expressAsyncHandler(async (req, res) => {
 });
 
 const testSubmit = expressAsyncHandler(async (req, res) => {
-  const { testId, userAnswers, progressId, moduleId } = req.body;
- 
-  console.log("testSubmit data:", { testId, userAnswers });
- 
-  if (!testId || !userAnswers || !progressId || !moduleId) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message:
-          "Test ID, user Answers, Module ID, and Progress ID are required",
-      });
+  const { testId, userAnswers, courseId, moduleId } = req.body;
+  const userId = req.user._id;
+
+  if (!testId || !userAnswers || !courseId || !moduleId) {
+    return res.status(400).json({
+      success: false,
+      message: "Test ID, user Answers, Course ID, and Module ID are required",
+    });
   }
- 
- 
+
   try {
     const test = await Test.findById(testId);
-    if (!test)
-      return res.status(404).json({ success: false, message: "Test not found" });
- 
+    if (!test) return res.status(404).json({ success: false, message: "Test not found" });
+
     const questions = test.questions;
-    if (questions.length === 0)
-      return res
-        .status(404)
-        .json({ success: false, message: "No questions found" });
- 
+    if (!questions || questions.length === 0) {
+      return res.status(404).json({ success: false, message: "No questions found" });
+    }
+
     let correctCount = 0;
+
+    // Map answers
+    const formattedAnswers = Object.entries(userAnswers).map(([index, selectedOption]) => ({
+      questionId: questions[parseInt(index)]?._id,
+      selectedOption
+    }));
+
     Object.entries(userAnswers).forEach(([index, answer]) => {
       const i = parseInt(index);
-      if (questions[i] && questions[i].correctAnswer === answer) correctCount++;
+      if (questions[i] && questions[i].correctAnswer === answer) {
+        correctCount++;
+      }
     });
- 
+
     const score = correctCount;
     const percentage = (score / questions.length) * 100;
- 
-    const progress = await Progress.findById(progressId);
-    if (!progress)
-      return res
-        .status(404)
-        .json({ success: false, message: "Progress not found" });
- 
-    const module = progress.moduleProgress.find(
-      (x) => x.module.toString() === moduleId
-    );
-    if (!module)
-      return res
-        .status(404)
-        .json({ success: false, message: "Module not found" });
- 
-    const targetTestData = module.testStatus.find(
-      (x) => x.test.toString() === testId
-    );
-    if (!targetTestData)
-      return res
-        .status(404)
-        .json({ success: false, message: "Test not found in module" });
- 
-    if(!targetTestData.isCompleted){
-      targetTestData.isCompleted = percentage >= 75;
+    const isPassed = percentage >= 75;
+
+    // Upsert TestProgress
+    let testProgress = await TestProgress.findOne({
+      userId,
+      courseId,
+      moduleId,
+      testId,
+    });
+
+    if (!testProgress) {
+      testProgress = new TestProgress({
+        userId,
+        courseId,
+        moduleId,
+        testId,
+      });
     }
-    targetTestData.marksScored = score;
-    targetTestData.retakeCount = (targetTestData.retakeCount || 0) + 1;
- 
-    if (targetTestData.isCompleted) {
-      const allVideosCompleted = module.videoProgress.every(
-        (video) => video.status === "completed"
-      );
-      const allTestsCompleted = module.testStatus.every(
-        (test) => test.isCompleted === true
-      );
- 
-      if (allVideosCompleted && allTestsCompleted) {
-        module.status = "completed";
-      }
-    }
- 
- 
-    await progress.save();
- 
-    return res.status(200).json({ success: true, score });
+
+    testProgress.status = 'completed';
+    testProgress.lastAttemptedTime = new Date();
+    testProgress.score = score;
+    testProgress.isPassed = isPassed;
+    testProgress.retakeCount += 1;
+    testProgress.yourAnswers = formattedAnswers;
+
+    await testProgress.save();
+
+    const allTestProgress = await TestProgress.find({ userId, courseId, moduleId });
+    const courseProgress = await CourseProgress.findOne({ userId, courseId });
+    const moduleProgress = await ModuleProgress.find({ userId, courseId });
+    const videoProgres =  await VideoProgress.find({userId, courseId, moduleId})
+    return res.status(200).json({
+      success: true,
+      message: "Test submitted successfully",
+      score,
+      testProgress,
+      courseProgress,
+      moduleProgress,
+      testProgressList: allTestProgress,
+      videoProgressList:videoProgres,
+    });
   } catch (error) {
     console.error("Error in testSubmit:", error);
     return res.status(500).json({ success: false, message: "Server error" });
