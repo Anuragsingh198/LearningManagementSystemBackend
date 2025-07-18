@@ -21,6 +21,7 @@ const ModuleProgress = require("../models/courseProgressSchemas/moduleProgress")
 const { json } = require("stream/consumers");
 const TestProgress = require("../models/courseProgressSchemas/testProgress");
 const VideoProgress = require("../models/courseProgressSchemas/videoProgress");
+const CourseProgress = require("../models/courseProgressSchemas/courseProgress");
 const createCourse = expressAsyncHandler(async (req, res) => {
   try {
     const { title, description, category, price, compulsory , courseDuration , remark} = req.body;
@@ -469,75 +470,62 @@ const getCourseProgress = expressAsyncHandler(async (req, res) => {
 });
 
 
-
-
-
-const updateVideoProgress = expressAsyncHandler(async (req, res) => {
-  // console.log('update video progress controller called');
+const updateVideoCompletion = expressAsyncHandler(async (req, res) => {
   const { courseId, videoId, moduleId } = req.body;
   const userId = req.user._id;
 
   try {
-    const progress = await Progress.findOne({ user: userId, course: courseId });
+    const videoProgress = await VideoProgress.findOne({ userId, courseId, moduleId, videoId });
 
-    if (!progress) {
-      return res.status(404).json({ success: false, message: "Progress not found" });
+    if (!videoProgress) {
+      return res.status(404).json({ success: false, message: 'Video progress not found' });
     }
 
-    let moduleUpdated = false;
+    const wasCompleted = videoProgress.status === 'completed';
+    if (!wasCompleted) {
+      videoProgress.status = 'completed';
+      videoProgress.lastWatchedTime = videoProgress.videoDuration || videoProgress.lastWatchedTime;
+      await videoProgress.save();
 
-    // Find the specific module by moduleId
-    const targetModule = progress.moduleProgress.find(
-      m => m.module.toString() === moduleId
-    );
+      const moduleProgress = await ModuleProgress.findOne({ userId, courseId, moduleId });
 
-    if (!targetModule) {
-      return res.status(404).json({ success: false, message: "Module not found in progress" });
+      if (moduleProgress) {
+        moduleProgress.completedVideos += 1;
+
+        const totalItems = moduleProgress.totalVideos + moduleProgress.totalTests;
+        const completedItems = moduleProgress.completedVideos + moduleProgress.completedTest;
+        moduleProgress.percentageCompleted = totalItems === 0 ? 0 : (completedItems / totalItems) * 100;
+
+        if (moduleProgress.completedVideos >= moduleProgress.totalVideos) {
+          moduleProgress.status = 'completed';
+        } else {
+          moduleProgress.status = 'in-progress';
+        }
+
+        await moduleProgress.save();
+      }
     }
 
-    // Find the video inside the matched module
-    const video = targetModule.videoProgress.find(v => v.video.toString() === videoId);
-
-    if (!video) {
-      return res.status(404).json({ success: false, message: "Video not found in specified module" });
-    }
-
-    if (video.status === "completed") {
-      return res.status(200).json({ success: true, message: "Video already marked as completed" });
-    }
-
-    // Step 1: Update video status
-    video.status = "completed";
-    moduleUpdated = true;
-
-    // Step 2: Check if all videos are completed
-    const allVideosCompleted = targetModule.videoProgress.every(v => v.status === "completed");
-
-    // Step 3: Check if all tests are completed
-    const allTestsCompleted = targetModule.testStatus.every(t => t.isCompleted === true);
-
-    if (allVideosCompleted && allTestsCompleted) {
-      targetModule.percentageCompleted = 100;
-      targetModule.status = "completed";
-    }
-
-    await progress.save();
+    const updatedVideoProgress = await VideoProgress.findOne({ _id: videoProgress._id });
+    const updatedModuleProgress = await ModuleProgress.findOne({ userId, courseId });
+    const newTestProgress = await TestProgress.findOne({ userId, courseId, moduleId });
+    const courseProgress = await CourseProgress.findOne({ userId, courseId });
 
     return res.status(200).json({
       success: true,
-      message: "Video progress updated",
-      progress,
+      message: 'Video marked as completed',
+      videoProgress: updatedVideoProgress,
+      moduleProgress: updatedModuleProgress,
+      testProgress: newTestProgress,
+      courseProgress,
     });
 
   } catch (error) {
-    console.error("Error in updating video progress:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server error",
-      error: error.message || "Something went wrong"
-    });
+    console.error('Error marking video as complete:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
 
 const createUserProgressForNewModule = expressAsyncHandler(async (req, res) => {
   const { courseId, chapterId } = req.body;
@@ -922,7 +910,7 @@ module.exports = {
   getModuleById,
   testSubmit,
   getCourseProgress,
-  updateVideoProgress,
+  updateVideoCompletion,
   createUserProgressForNewModule,
   checkVideoOrTestInUserProgressSchema,
   generateCertificate,

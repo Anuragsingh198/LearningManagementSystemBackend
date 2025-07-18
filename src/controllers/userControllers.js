@@ -152,27 +152,30 @@ const enrollCourse = expressAsyncHandler(async (req, res) => {
 
 const moduleProgress = expressAsyncHandler(async (req, res) => {
   const { courseId, moduleId, moduleData } = req.body;
+  console.log(" this is the  module data : ",moduleData );
   const userId = req.user._id;
 
   try {
-    let moduleProgress = await ModuleProgress.findOne({ userId, courseId, moduleId });
+const currentModule = await Module.findById(moduleId);
+let moduleProgress = await ModuleProgress.findOne({ userId, courseId, moduleId });
 
-    let alreadyInitialized = true;
-    if (!moduleProgress) {
-      alreadyInitialized = false;
-      moduleProgress = new ModuleProgress({
-        userId,
-        courseId,
-        moduleId,
-        status: moduleData?.status || 'not-started',
-        videoIndex: moduleData?.videoIndex || 0,
-        totalVideos: moduleData?.totalVideos || 0,
-        totalTests: moduleData?.totalTests || 0,
-        completedVideos: 0,
-        completedTest: 0,
-        percentageCompleted: 0
-      });
-      await moduleProgress.save();
+let alreadyInitialized = true;
+if (!moduleProgress) {
+  alreadyInitialized = false;
+  moduleProgress = new ModuleProgress({
+    userId,
+    courseId,
+    moduleId,
+    status: currentModule?.status || 'not-started',
+    videoIndex: currentModule?.currentVideoIndex || 0,
+    totalVideos: currentModule?.videos.length || 0,
+    totalTests: currentModule?.tests.length || 0,
+    completedVideos: 0,
+    completedTest: 0,
+    percentageCompleted: 0
+  });
+
+  await moduleProgress.save();
     }
     const courseProgress = await CourseProgress.findOne({ userId, courseId });
     const videoProgress = await VideoProgress.find({ userId, courseId });
@@ -241,7 +244,7 @@ const getCourseWithProgress = expressAsyncHandler(async (req, res) => {
 const videoProgress = expressAsyncHandler(async (req, res) => {
   const { courseId, videoId, moduleId, videoData } = req.body;
   const userId = req.user._id;
-  console.log("This is the  data form  videoProgres: ",courseId,videoId , moduleId );
+  console.log("This is the  data form  videoProgres: ",courseId._id,videoId , moduleId );
   try {
     let existingProgress = await VideoProgress.findOne({ userId, courseId, moduleId, videoId });
 
@@ -263,7 +266,7 @@ const videoProgress = expressAsyncHandler(async (req, res) => {
     const moduleProgress = await ModuleProgress.find({ userId, courseId });
     const videoProgress = await VideoProgress.find({ userId, courseId });
     const testProgress = await TestProgress.find({ userId, courseId });
-     console.log("this is  the  video data : video progress data ",existingProgress )
+     console.log("this is  the  video data : video progress data ",courseProgress )
     return res.status(200).json({
       success: true,
       message: 'Video progress handled successfully',
@@ -280,43 +283,46 @@ const videoProgress = expressAsyncHandler(async (req, res) => {
 });
 
 
-
 const testProgress = expressAsyncHandler(async (req, res) => {
   const { courseId, testId, moduleId, testData } = req.body;
   const userId = req.user._id;
 
-  try {
-    const existingProgress = await TestProgress.findOne({ userId, courseId, moduleId, testId });
 
-    if (existingProgress) {
-      return res.status(400).json({
-        success: false,
-        message: 'Test progress already exists.',
-        testProgress: existingProgress,
-        alreadyInitialized: true
+  try {
+    let existingProgress = await TestProgress.findOne({ userId, courseId, moduleId, testId });
+  console.log("this is the  existing  test progress : " , existingProgress)
+    if (!existingProgress) {
+      existingProgress = new TestProgress({
+        userId,
+        courseId,
+        moduleId,
+        testId,
+        status: 'in-progress',
+        lastAttemptedTime: new Date(),
+        score: testData?.score || 0,
+        isPassed: testData?.isPassed || false,
+        retakeCount: testData?.retakeCount || 0,
+        yourAnswers: testData?.yourAnswers || [],
       });
+
+      await existingProgress.save();
     }
 
-    const newProgress = new TestProgress({
-      userId,
-      courseId,
-      moduleId,
-      testId,
-      status: 'in-progress',
-      lastAttemptedTime: new Date(),
-      score: testData?.score || 0,
-      isPassed: testData?.isPassed || false,
-      retakeCount: testData?.retakeCount || 0,
-      yourAnswers: testData?.yourAnswers || [],
-    });
 
-    await newProgress.save();
+    const courseProgress = await CourseProgress.findOne({ userId, courseId });
+    const moduleProgressList = await ModuleProgress.find({ userId, courseId });
+    const videoProgressList = await VideoProgress.find({ userId, courseId , moduleId });
+    const testProgressList = await TestProgress.find({ userId, courseId , moduleId});
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
       message: 'Test progress initialized successfully',
-      testProgress: newProgress,
-      alreadyInitialized: false
+      testProgress: existingProgress,
+      alreadyInitialized: !!existingProgress._id,
+      courseProgress,
+      moduleProgress: moduleProgressList,
+      videoProgress: videoProgressList,
+      testProgressList,
     });
 
   } catch (error) {

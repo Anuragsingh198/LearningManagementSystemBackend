@@ -2,7 +2,7 @@ const express = require('express');
 const { registerUser, loginUser, getEnrolledEmployees, resetPassword, generateOtpHandler, verifyOtpHandler } = require('../controllers/authController');
 const { protect, isEmployee, isInstructor } = require('../middlewares/authmiddleware');
 const {  enrollCourse, moduleProgress, videoProgress, testProgress, getCoursesByUserId, getCourseWithProgress} = require('../controllers/userControllers');
-const { testSubmit, updateVideoProgress, createUserProgressForNewModule, checkVideoOrTestInUserProgressSchema, getCourseByCourseId } = require('../controllers/CourseController');
+const { testSubmit, createUserProgressForNewModule, checkVideoOrTestInUserProgressSchema, getCourseByCourseId, updateVideoCompletion } = require('../controllers/CourseController');
 
 const useRoutes = express.Router();
 
@@ -30,8 +30,9 @@ useRoutes.get('/profile', protect, (req, res) => {
 useRoutes.get('/logout', (req, res) => {
     res.json({ success: true, message: 'User logged out successfully' });
 });
+
 useRoutes.get('/:userId' , protect, getCoursesByUserId)
-useRoutes.post('/video-progress', protect, updateVideoProgress)
+useRoutes.post('/video-progress/complete', protect, updateVideoCompletion)
 useRoutes.get('/:courseId/enrolled-employees' ,protect , isInstructor, getEnrolledEmployees)
 
 useRoutes.post('/reset-password' ,resetPassword)
