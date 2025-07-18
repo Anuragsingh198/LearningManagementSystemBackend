@@ -506,19 +506,22 @@ const updateVideoCompletion = expressAsyncHandler(async (req, res) => {
       }
     }
 
-    const updatedVideoProgress = await VideoProgress.findOne({ _id: videoProgress._id });
-    const updatedModuleProgress = await ModuleProgress.findOne({ userId, courseId });
-    const newTestProgress = await TestProgress.findOne({ userId, courseId, moduleId });
+    const updatedVideoProgress = await VideoProgress.find({userId, courseId , moduleId});
+    const updatedModuleProgress = await ModuleProgress.find({ userId, courseId });
+    const newTestProgress = await TestProgress.find({ userId, courseId, moduleId });
     const courseProgress = await CourseProgress.findOne({ userId, courseId });
-
+    const oneVideoProgress = await VideoProgress.find({_id:videoProgress._id});
+    const oneModuleProgress =  await ModuleProgress.findOne({userId, courseId, moduleId})
     return res.status(200).json({
-      success: true,
-      message: 'Video marked as completed',
-      videoProgress: updatedVideoProgress,
-      moduleProgress: updatedModuleProgress,
-      testProgress: newTestProgress,
-      courseProgress,
-    });
+  success: true,
+  message: 'Video marked as completed',
+  videoProgress: updatedVideoProgress, 
+  videoProgressItem: oneVideoProgress[0], 
+  moduleProgress: updatedModuleProgress,
+  testProgress: newTestProgress,
+  courseProgress, 
+  oneModuleProgress
+});
 
   } catch (error) {
     console.error('Error marking video as complete:', error);
