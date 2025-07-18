@@ -34,7 +34,7 @@ const createCourse = expressAsyncHandler(async (req, res) => {
       return res.status(403).json({ success: false, message: "Only instructors can create courses" });
     }
 
-    const thumbnail = await uploadToAzureBlob(file.buffer, file.originalname, file.mimetype);
+    const thumbnail = await uploadStreamToAzureBlob(file.buffer, file.originalname, file.mimetype);
 
     const course = await Course.create({
       title,

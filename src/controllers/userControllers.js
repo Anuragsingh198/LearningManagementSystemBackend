@@ -23,6 +23,24 @@ const getCoursesByUserId = expressAsyncHandler(async (req, res) => {
       message: 'Valid user ID is required.',
     });
   }
+  const user = await User.findById(userId).populate('courses');
+
+  // If user is not found
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found',
+    });
+  }
+
+  // Check role and return appropriate courses
+  if (user.role === 'instructor') {
+    return res.status(200).json({
+      success: true,
+      message: 'Uploaded courses fetched',
+      adminCourses: user.courses,
+    });
+  }
 
   try {
     const coursesWithProgress = await CourseProgress.find({ userId }).populate('courseId');
