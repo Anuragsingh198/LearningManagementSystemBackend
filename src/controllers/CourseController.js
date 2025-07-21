@@ -345,12 +345,16 @@ const testSubmit = expressAsyncHandler(async (req, res) => {
     const percentage = (score / questions.length) * 100;
     const isPassed = percentage >= 75;
 
+<<<<<<< HEAD
     let testProgress = await TestProgress.findOne({
       userId,
       courseId,
       moduleId,
       testId,
     });
+=======
+    let testProgress = await TestProgress.findOne({ userId, courseId, moduleId, testId });
+>>>>>>> aafb4fd92937702ee5695c73e684092a8bd959f1
 
     if (!testProgress) {
       testProgress = new TestProgress({
@@ -358,7 +362,11 @@ const testSubmit = expressAsyncHandler(async (req, res) => {
         courseId,
         moduleId,
         testId,
+<<<<<<< HEAD
         retakeCount: 0
+=======
+        retakeCount: 0,
+>>>>>>> aafb4fd92937702ee5695c73e684092a8bd959f1
       });
     }
 
@@ -371,6 +379,7 @@ const testSubmit = expressAsyncHandler(async (req, res) => {
 
     await testProgress.save();
 
+<<<<<<< HEAD
     let moduleProgress = await ModuleProgress.findOne({
       userId,
       courseId,
@@ -431,6 +440,58 @@ const testSubmit = expressAsyncHandler(async (req, res) => {
     const courseProgress = await CourseProgress.findOne({ userId, courseId });
     const moduleProgressList = await ModuleProgress.find({ userId, courseId });
     const videoProgressList = await VideoProgress.find({ userId, courseId, moduleId });
+=======
+    let moduleProgress = await ModuleProgress.findOne({ userId, courseId, moduleId });
+    if (moduleProgress) {
+      if (isPassed) {
+        const passedTestsCount = await TestProgress.countDocuments({
+          userId,
+          courseId,
+          moduleId,
+          isPassed: true,
+        });
+
+        moduleProgress.completedTest = passedTestsCount;
+
+        const total = (moduleProgress.totalVideos || 0) + (moduleProgress.totalTests || 0);
+        const completed = (moduleProgress.completedVideos || 0) + passedTestsCount;
+
+        moduleProgress.percentageCompleted = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+        if (moduleProgress.percentageCompleted === 100) {
+          moduleProgress.status = "completed";
+        } else if (completed > 0) {
+          moduleProgress.status = "in-progress";
+        }
+
+        await moduleProgress.save();
+      }
+    }
+
+    const allModuleProgress = await ModuleProgress.find({ userId, courseId });
+    const totalModules = allModuleProgress.length;
+    const completedModules = allModuleProgress.filter(mod => mod.status === "completed").length;
+
+    let courseProgress = await CourseProgress.findOne({ userId, courseId });
+    if (courseProgress) {
+      courseProgress.totalModules = totalModules;
+      courseProgress.completedModules = completedModules;
+      courseProgress.overallPercentage = totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0;
+
+      if (courseProgress.overallPercentage === 100) {
+        courseProgress.isCourseCompleted = true;
+        courseProgress.status = "completed";
+        courseProgress.completionDate = new Date();
+      } else if (completedModules > 0) {
+        courseProgress.status = "enrolled";
+      }
+
+      await courseProgress.save();
+    }
+
+    const allTestProgress = await TestProgress.find({ userId, courseId, moduleId });
+    const allVideoProgress = await VideoProgress.find({ userId, courseId, moduleId });
+>>>>>>> aafb4fd92937702ee5695c73e684092a8bd959f1
 
     return res.status(200).json({
       success: true,
@@ -440,8 +501,12 @@ const testSubmit = expressAsyncHandler(async (req, res) => {
       courseProgress,
       moduleProgress,
       testProgressList: allTestProgress,
+<<<<<<< HEAD
       videoProgressList,
       message: 'this is the result after submitting the test'
+=======
+      videoProgressList: allVideoProgress,
+>>>>>>> aafb4fd92937702ee5695c73e684092a8bd959f1
     });
 
   } catch (error) {
