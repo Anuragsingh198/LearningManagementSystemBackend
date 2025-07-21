@@ -52,6 +52,7 @@ const getCoursesByUserId = expressAsyncHandler(async (req, res) => {
         courses: [],
       });
     }
+
     const courses = coursesWithProgress.map((progress) => {
       const course = progress.courseId;
       if (!course) return null;
@@ -305,11 +306,20 @@ const testProgress = expressAsyncHandler(async (req, res) => {
   const { courseId, testId, moduleId, testData } = req.body;
   const userId = req.user._id;
 
+  console.log('course id is: ', courseId)
+  console.log('test id is: ', testId)
+
+  console.log('module id is: ', moduleId)
+  console.log('testdata id is: ', testData )
+  console.log('testdata id is: ', userId )
+
+
 
   try {
     let existingProgress = await TestProgress.findOne({ userId, courseId, moduleId, testId });
   console.log("this is the  existing  test progress : " , existingProgress)
     if (!existingProgress) {
+      console.log('we are in if block')
       existingProgress = new TestProgress({
         userId,
         courseId,
@@ -341,6 +351,7 @@ const testProgress = expressAsyncHandler(async (req, res) => {
       moduleProgress: moduleProgressList,
       videoProgress: videoProgressList,
       testProgressList,
+      message: 'this is the test progress, check is passed in testProgress'
     });
 
   } catch (error) {

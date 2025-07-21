@@ -23,7 +23,7 @@ const testProgressSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['not-started', 'in-progress', 'completed'],
+    enum: ['not-started', 'in-progress', 'completed', 'failed'],
     default: 'not-started'
   },
   lastAttemptedTime: {
