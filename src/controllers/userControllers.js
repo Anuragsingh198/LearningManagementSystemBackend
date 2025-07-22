@@ -303,17 +303,8 @@ const videoProgress = expressAsyncHandler(async (req, res) => {
 
 
 const testProgress = expressAsyncHandler(async (req, res) => {
-  const { courseId, testId, moduleId, testData } = req.body;
+  const { courseId, testId, moduleId } = req.body;
   const userId = req.user._id;
-
-  console.log('course id is: ', courseId)
-  console.log('test id is: ', testId)
-
-  console.log('module id is: ', moduleId)
-  console.log('testdata id is: ', testData )
-  console.log('testdata id is: ', userId )
-
-
 
   try {
     let existingProgress = await TestProgress.findOne({ userId, courseId, moduleId, testId });
@@ -327,10 +318,10 @@ const testProgress = expressAsyncHandler(async (req, res) => {
         testId,
         status: 'in-progress',
         lastAttemptedTime: new Date(),
-        score: testData?.score || 0,
-        isPassed: testData?.isPassed || false,
-        retakeCount: testData?.retakeCount || 0,
-        yourAnswers: testData?.yourAnswers || [],
+        score: 0,
+        isPassed: false,
+        retakeCount: 0,
+        yourAnswers: [],
       });
 
       await existingProgress.save();
