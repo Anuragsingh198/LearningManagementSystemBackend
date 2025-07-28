@@ -457,6 +457,8 @@ const testSubmit = expressAsyncHandler(async (req, res) => {
 });
 
 
+
+
 const getCourseProgress = expressAsyncHandler(async (req, res) => {
   const { courseId, userId } = req.body;
 
@@ -536,19 +538,41 @@ const getCourseProgress = expressAsyncHandler(async (req, res) => {
 const updateVideoCompletion = expressAsyncHandler(async (req, res) => {
   const { courseId, videoId, moduleId } = req.body;
   const userId = req.user._id;
-
+  console.log("update video completion api called")
   try {
     const videoProgress = await VideoProgress.findOne({ userId, courseId, moduleId, videoId });
+
+    if(!courseId){
+       return res.status(400).json({
+      success: false,
+      message: "ModuleId is missing"
+    });
+    }
+     if( !moduleId){
+       return res.status(400).json({
+      success: false,
+      message: "CourseId is missing"
+    });
+    }
+ if(!videoId){
+       return res.status(400).json({
+      success: false,
+      message: " videoId is missing"
+    });
+    }
+
 
     if (!videoProgress) {
       return res.status(404).json({ success: false, message: 'Video progress not found' });
     }
 
     const wasCompleted = videoProgress.status === 'completed';
+    console.log('was completed is: ', videoProgress)
     if (!wasCompleted) {
       videoProgress.status = 'completed';
       videoProgress.lastWatchedTime = videoProgress.videoDuration || videoProgress.lastWatchedTime;
       await videoProgress.save();
+      console.log('checking status after saving', videoProgress.status)
 
       const moduleProgress = await ModuleProgress.findOne({ userId, courseId, moduleId });
 
@@ -963,6 +987,73 @@ const generateSASToken = expressAsyncHandler(async (req, res) => {
   }
 });
 
+const updateLastWatched = expressAsyncHandler(async (req, res) => {
+  const { courseId, moduleId, currentTime, currentVideoIndex, videoId } = req.body;
+
+
+
+  const userId = req.user._id;
+
+  console.log('user id is:', userId);
+  console.log('course id is:', courseId);
+  console.log('module id is:', moduleId);
+  console.log('video id is:', videoId);
+  console.log('lastWatched is:', currentTime);
+  console.log('lastVideoIndex is:', currentVideoIndex);
+
+  if (!courseId || !moduleId || currentTime === undefined || currentVideoIndex === undefined || !videoId) {
+    return res.status(400).json({
+      success: false,
+      message: "ModuleId, CourseId, currentTime, videoIndex, or videoId is missing"
+    });
+  }
+
+  try {
+    const videoProgress = await VideoProgress.findOne({ userId, courseId, moduleId, videoId });
+    if (!videoProgress) {
+      return res.status(404).json({
+        success: false,
+        message: "videoProgress not found for this user and video"
+      });
+    }
+
+    const moduleProgress = await ModuleProgress.findOne({ userId, courseId, moduleId });
+    if (!moduleProgress) {
+      return res.status(404).json({
+        success: false,
+        message: "Module Progress not found for this user and video"
+      });
+    }
+
+    console.log('module progrss before update: ', moduleProgress)
+
+    videoProgress.lastWatchedTime = currentTime;
+    await videoProgress.save();
+
+    moduleProgress.videoIndex = currentVideoIndex;
+    await moduleProgress.save();
+
+    console.log('module progrss after update: ', moduleProgress)
+
+
+    const videoProgressList = await VideoProgress.find({ userId, courseId, moduleId });
+
+    res.status(200).json({
+      success: true,
+      message: "Progress updated successfully",
+      videoProgress,
+      moduleProgress,
+      videoProgressList
+    });
+
+  } catch (error) {
+    console.error('Backend error:', error);
+    return res.status(500).json({
+      success: false,
+      message: "Error in updating last watch video timer"
+    });
+  }
+});
 
 module.exports = {
   createCourse,
@@ -985,4 +1076,5 @@ module.exports = {
   deleteModule,
   deleteTest,
   generateSASToken,
+  updateLastWatched
 };

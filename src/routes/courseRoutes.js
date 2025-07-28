@@ -1,4 +1,4 @@
-const {createCourse, createModule, createTest, createVideo , getCourses, getModulesByCourseId, getCourseByCourseId, getVideosByModuleId, getModuleById, getCourseProgress, generateCertificate, deleteCourse, deleteVideo, deleteModule, deleteTest, generateSASToken} = require('../controllers/CourseController');
+const {createCourse, createModule, createTest, createVideo , getCourses, getModulesByCourseId, getCourseByCourseId, getVideosByModuleId, getModuleById, getCourseProgress, generateCertificate, deleteCourse, deleteVideo, deleteModule, deleteTest, generateSASToken, updateLastWatched} = require('../controllers/CourseController');
 const express = require('express');
 const { protect, isInstructor, isEmployee } = require('../middlewares/authmiddleware');
 const multer = require('multer');
@@ -22,5 +22,7 @@ courseRoutes.delete('/delete-test/:testId', protect, isInstructor, deleteTest);
 courseRoutes.get('/videos/:blobName/expires', protect, generateSASToken); 
 // courseRoutes.get('/videos/:moduleId' , getVideosByModuleId)
 courseRoutes.get('/module/:moduleId' , getModuleById)
+courseRoutes.post('/module/video-update' , protect, updateLastWatched)
+
 
 module.exports = courseRoutes;
