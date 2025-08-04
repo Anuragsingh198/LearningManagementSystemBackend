@@ -50,7 +50,7 @@ const testProgressSchema = new mongoose.Schema({
       ref: 'Question',
       required: true
     },
-    selectedOption: {
+    selectedOption: { 
       type: String,
       required: true
     }
