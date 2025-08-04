@@ -9,7 +9,11 @@ const  courseRoutes = express.Router();
 
 courseRoutes.post('/course-module', protect, isInstructor, createModule);
 courseRoutes.post('/create-course', protect, isInstructor, upload.single('thumbnail'), createCourse);
-courseRoutes.post('/create-video', protect, isInstructor, upload.single('video'), createVideo);   
+courseRoutes.post('/create-video', protect, isInstructor, upload.single('video'), createVideo);  
+// courseRoutes.post('/create-video', protect, isInstructor, createVideo);
+
+courseRoutes.post('/create-video', protect, isInstructor, createVideo);
+
 courseRoutes.post('/addtest', protect, isInstructor, createTest);
 courseRoutes.get('/', getCourses);
 courseRoutes.get('/modules/:courseId' , getModulesByCourseId)
