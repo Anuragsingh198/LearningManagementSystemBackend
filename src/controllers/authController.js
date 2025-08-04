@@ -9,6 +9,7 @@ const Course = require('../models/CourseSchemas/courseModel');
 const { otpTemplate } = require('../utils/emailhtmls');
 const bcrypt = require('bcrypt');
 const e = require('express');
+const CourseProgress = require('../models/courseProgressSchemas/courseProgress');
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -176,6 +177,7 @@ const getEnrolledEmployees = expressAsyncHandler(async (req, res) => {
     }
 
     const course = await Course.findById(courseId).populate('students');
+    
     if (!course || course.students.length === 0) {
       return res.status(404).json({ success: false, message: "No students found in this course" });
     }
@@ -183,20 +185,30 @@ const getEnrolledEmployees = expressAsyncHandler(async (req, res) => {
     const showAllStudentData = [];
     const studentCount = course.students.length;
     const title = course.title;
-    for (const student of course.students) {
-      const progressRecord = await Progress.findOne({
-        user: student._id || student,
-        course: course._id,
-      }).populate("user");
 
-      if (progressRecord && progressRecord.user) {
-        showAllStudentData.push({
-          status: progressRecord.status,
-          name: progressRecord.user.name,
-          empId: progressRecord.user.employeeId || "EMP001",
+    for (const student of course.students) {
+      const progressRecords = await CourseProgress.find({
+        userId: student._id,
+        courseId: course._id,
+      }).populate("userId");
+
+      console.log('courseis: ', course);
+      console.log('progress record is: ', progressRecords);
+
+      if (progressRecords.length > 0) {
+        progressRecords.forEach((record) => {
+          if (record.userId) {
+            showAllStudentData.push({
+              status: record.status,
+              name: record.userId.name,
+              empId: record.userId.employeeId || "EMP001",
+            });
+          }
         });
       }
     }
+
+    console.log('students are is: ', showAllStudentData);
 
     return res.status(200).json({
       success: true,
@@ -212,7 +224,6 @@ const getEnrolledEmployees = expressAsyncHandler(async (req, res) => {
     return res.status(500).json({ success: false, message: "Server Error" });
   }
 });
-
 
 const resetPassword = expressAsyncHandler(async (req, res) => {
   console.log('req. body is for reset password:', req.password);
