@@ -22,6 +22,7 @@ const { json } = require("stream/consumers");
 const TestProgress = require("../models/courseProgressSchemas/testProgress");
 const VideoProgress = require("../models/courseProgressSchemas/videoProgress");
 const CourseProgress = require("../models/courseProgressSchemas/courseProgress");
+const Article = require("../models/CourseSchemas/articlesModel");
 const createCourse = expressAsyncHandler(async (req, res) => {
   try {
     const { title, description, category, price, compulsory , courseDuration , remark} = req.body;
@@ -141,7 +142,7 @@ const createVideo = expressAsyncHandler(async (req, res) => {
     return res.status(500).json({ success: false, message: 'Failed to get video duration' });
   }
   
-  const videoBlob = await uploadStreamToAzureBlob(req.file.buffer, req.file.originalname, req.file.mimetype);
+  const videoBlob = await uploadStreamToAzureBlob(req.file.buffer, req.file.originalname, req.file.mimetype, 'videos');
   console.log('Uploaded video:', videoBlob);
   const video = await Video.create({
     title,
@@ -159,6 +160,46 @@ const createVideo = expressAsyncHandler(async (req, res) => {
 
   res.status(201).json({ success: true, video });
 });
+
+const createArticle = expressAsyncHandler(async (req, res) => {
+   const { title, description, courseId, moduleId } = req.body;
+   console.log('from create article', title, description, courseId, moduleId)
+
+  if (!req.file || !title || !courseId || !moduleId) {
+    return res.status(400).json({ success: false, message: 'All fields are required' });
+  }
+
+  const user = await User.findById(req.user._id);
+  if (!user || user.role !== 'instructor') {
+    return res.status(403).json({ success: false, message: 'Only instructors can upload Articles' });
+  }
+
+  const course = await Course.findById(courseId);
+  const module = await Module.findById(moduleId);
+  if (!course || !module) {
+    return res.status(404).json({ success: false, message: 'Course or module not found' });
+  }
+
+  const pdfBlob = await uploadStreamToAzureBlob(req.file.buffer, req.file.originalname, req.file.mimetype, 'articles');
+
+  console.log('Uploaded Article:', pdfBlob);
+
+  const article = await Article.create({
+    title,
+    description,
+    url: pdfBlob.url,
+    articleBlobName: pdfBlob.blobName,
+    course: courseId,
+    module: moduleId,
+    uploadedBy: user._id,
+  });
+
+  module.articles.push(article._id);
+  await module.save();
+
+  res.status(201).json({ success: true, article });
+
+})
 
 
 const createTest = expressAsyncHandler(async (req, res) => {
@@ -292,7 +333,8 @@ const getModuleById = expressAsyncHandler(async (req, res) => {
   try {
     const module = await Module.findById(moduleId)
       .populate("videos")
-      .populate("tests");
+      .populate("tests")
+      .populate("articles");
 
     if (!module) {
       return res
@@ -1059,6 +1101,7 @@ module.exports = {
   createCourse,
   createModule,
   createVideo,
+  createArticle,
   createTest,
   getCourses,
   getModulesByCourseId,

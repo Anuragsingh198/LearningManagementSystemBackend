@@ -1,4 +1,4 @@
-const {createCourse, createModule, createTest, createVideo , getCourses, getModulesByCourseId, getCourseByCourseId, getVideosByModuleId, getModuleById, getCourseProgress, generateCertificate, deleteCourse, deleteVideo, deleteModule, deleteTest, generateSASToken, updateLastWatched} = require('../controllers/CourseController');
+const {createCourse, createModule, createTest, createVideo , getCourses, getModulesByCourseId, getCourseByCourseId, getModuleById, generateCertificate, deleteCourse, deleteVideo, deleteModule, deleteTest, generateSASToken, updateLastWatched, createArticle} = require('../controllers/CourseController');
 const express = require('express');
 const { protect, isInstructor, isEmployee } = require('../middlewares/authmiddleware');
 const multer = require('multer');
@@ -11,6 +11,11 @@ courseRoutes.post('/course-module', protect, isInstructor, createModule);
 courseRoutes.post('/create-course', protect, isInstructor, upload.single('thumbnail'), createCourse);
 courseRoutes.post('/create-video', protect, isInstructor, upload.single('video'), createVideo);  
 // courseRoutes.post('/create-video', protect, isInstructor, createVideo);
+// Upload an article (PDF, DOCX, etc.)
+courseRoutes.post('/create-article', protect, isInstructor,
+     upload.single('article'), // <-- multer will look for 'article'
+  createArticle
+);
 
 courseRoutes.post('/create-video', protect, isInstructor, createVideo);
 

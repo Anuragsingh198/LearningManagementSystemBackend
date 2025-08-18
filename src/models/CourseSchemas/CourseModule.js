@@ -17,6 +17,10 @@ const   moduleSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Video',
     }],
+    articles: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Article'
+    }],
     tests: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Test',

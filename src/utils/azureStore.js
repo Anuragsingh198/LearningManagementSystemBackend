@@ -36,14 +36,14 @@ const blobServiceClient = new BlobServiceClient(
 
 const containerClient = blobServiceClient.getContainerClient(CONTAINER_NAME);
 
-const uploadStreamToAzureBlob = async (fileBuffer, fileName, mimeType) => {
-  const blobName = `${uuidv4()}-${fileName}`;
+const uploadStreamToAzureBlob = async (fileBuffer, fileName, mimeType, folder = '') => {
+  const blobName = folder ? `${folder}/${uuidv4()}-${fileName}` : `${uuidv4()}-${fileName}`;
   const blockBlobClient = containerClient.getBlockBlobClient(blobName);
   const stream = Readable.from(fileBuffer);
 
   await blockBlobClient.uploadStream(stream, 4 * 1024 * 1024, 5, {
     blobHTTPHeaders: {
-      blobContentType: mimeType || 'video/mp4'
+      blobContentType: mimeType || 'application/octet-stream'
     }
   });
 
@@ -52,6 +52,7 @@ const uploadStreamToAzureBlob = async (fileBuffer, fileName, mimeType) => {
     blobName
   };
 };
+
 
 const deleteFromAzureBlob = async (blobName) => {
   const blockBlobClient = containerClient.getBlockBlobClient(blobName);
