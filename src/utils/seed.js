@@ -4,6 +4,7 @@ const CodingQuestion = require("../models/asssementSchemas/codingQuestionSchema"
 const dummyQuestions = [
   {
     title: "Sum of Two Numbers",
+    type: 'coding',
     description: "Given two integers, output their sum.",
     difficulty: "Easy",
     constraints: "1 <= a,b <= 1000",
@@ -19,6 +20,7 @@ const dummyQuestions = [
   },
   {
     title: "Factorial",
+    type: 'coding',
     description: "Given an integer n, output its factorial.",
     difficulty: "Easy",
     constraints: "0 <= n <= 12",
@@ -34,6 +36,7 @@ const dummyQuestions = [
   },
   {
     title: "Palindrome Check",
+    type: 'coding',
     description: "Check if a given string is a palindrome (case-insensitive).",
     difficulty: "Medium",
     constraints: "String length <= 100",
@@ -49,6 +52,7 @@ const dummyQuestions = [
   },
   {
     title: "Fibonacci Number",
+    type: 'coding',
     description: "Given n, print the nth Fibonacci number (0-indexed).",
     difficulty: "Medium",
     constraints: "0 <= n <= 30",
@@ -64,6 +68,7 @@ const dummyQuestions = [
   },
   {
     title: "Prime or Not",
+    type: 'coding',
     description: "Given a number n, print YES if it's prime, otherwise NO.",
     difficulty: "Easy",
     constraints: "1 <= n <= 10^6",

@@ -40,7 +40,7 @@ app.use(express.json());
 app.use(morgan('dev')); 
 app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
-app.use('/api/assements' ,assementRouter )
+app.use('/api/assessments' ,assementRouter )
 app.use((req, res) => {
   return res.status(200).json({
     success: true,

@@ -1,10 +1,11 @@
 const { all } = require("axios");
 const { default: axios } = require("axios");
 const expressAsyncHandler = require("express-async-handler");
-const judge0ServerUrl  = process.env.JUDGE0_URL
-const  CodingQuestion =  require('../models/asssementSchemas/codingQuestionSchema')
-console.log('this is judge)url : ' , judge0ServerUrl );
- const getAllLanguages = async (req, res) => {
+const judge0ServerUrl = process.env.JUDGE0_URL
+const CodingQuestion = require('../models/asssementSchemas/codingQuestionSchema');
+const Assessment = require("../models/CourseSchemas/mainAssessmentModal");
+console.log('this is judge)url : ', judge0ServerUrl);
+const getAllLanguages = async (req, res) => {
   try {
     const { data } = await axios.get(`${judge0ServerUrl}/languages`, {
       headers: {
@@ -35,12 +36,12 @@ console.log('this is judge)url : ' , judge0ServerUrl );
   }
 };
 
- const getQuestionById = async (req, res) => {
+const getQuestionById = async (req, res) => {
   try {
     const { questionId } = req.params;
-    console.log("this is the  question id : " ,questionId )
-    const allQuestions   = await CodingQuestion.find();
-    console.log(' this is  all the  questions : ' , allQuestions);
+    console.log("this is the  question id : ", questionId)
+    const allQuestions = await CodingQuestion.find();
+    console.log(' this is  all the  questions : ', allQuestions);
     const question = await CodingQuestion.findById(questionId).populate('run_code_testcases');
 
     if (!question) {
@@ -57,8 +58,8 @@ console.log('this is judge)url : ' , judge0ServerUrl );
         title: question.title,
         description: question.description,
         difficulty: question.difficulty,
-        runCodeTestCases: question.run_code_testcases, 
-        constraints:[question.constraints],
+        runCodeTestCases: question.run_code_testcases,
+        constraints: [question.constraints],
       },
     });
   } catch (error) {
@@ -129,7 +130,7 @@ const runCode = async (req, res) => {
       console.log("=== Polling Results from Judge0 ===");
       console.log(JSON.stringify(data, null, 2));
 
-      results = data.submissions || data; 
+      results = data.submissions || data;
       if (results.every(r => r.status?.id >= 3)) break;
       await new Promise(r => setTimeout(r, 500));
     }
@@ -248,10 +249,107 @@ const submitCode = async (req, res) => {
   }
 };
 
+const fetchAllCodingQuestions = async (req, res) => {
+  try {
+    const allCodingQuestions = await CodingQuestion.find()
+    res.status(200).json({
+      success: true,
+      allCodingQuestions: allCodingQuestions
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error?.message || "Something went wrong fetching all the questions"
+    })
+  }
+}
+
+
+const addAssessment = async (req, res) => {
+  try {
+    const {
+      isMandatory,
+      title,
+      description,
+      topics,
+      duration,
+      mcqQuestions,
+      codingQuestions,
+      testType
+    } = req.body;
+
+     let newAssessment;
+
+    // Map mcqQuestions into schema format
+    if (testType === 'mcq' || testType === 'both') {
+      const formattedMcqQuestions = mcqQuestions.map(q => ({
+        questionText: q.questionText,
+        type: q.type || 'mcq',
+        options: q.options.map(opt => ({ optionText: opt })),
+        correctAnswer: q.correctAnswer
+      }));
+      newAssessment = new Assessment({
+        isMandatory,
+        title,
+        description,
+        topics,
+        duration,
+        testType,
+        questions: formattedMcqQuestions,
+        codingQuestionIds: codingQuestions
+      });
+
+      await newAssessment.save();
+
+      console.log('the new assessment stored in mongodb is: ', newAssessment)
+
+    }
+
+       if (testType === 'coding') {
+
+      newAssessment = new Assessment({
+        isMandatory,
+        title,
+        description,
+        topics,
+        duration,
+        testType,
+        codingQuestionIds: codingQuestions
+      });
+
+      await newAssessment.save();
+
+      console.log('the new assessment stored in mongodb is: ', newAssessment)
+
+    }
+
+
+    // Create new assessment
+
+
+    return res.status(201).json({
+      success: true,
+      message: "Assessment created successfully",
+      data: newAssessment
+    });
+
+  } catch (error) {
+    console.error("Error in addAssessment:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to add assessment",
+      error: error.message
+    });
+  }
+};
+
+
 
 module.exports = {
-    getAllLanguages,
-    getQuestionById, 
-    submitCode, 
-    runCode
+  getAllLanguages,
+  getQuestionById,
+  submitCode,
+  runCode,
+  fetchAllCodingQuestions,
+  addAssessment
 }

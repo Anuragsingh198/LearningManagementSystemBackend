@@ -5,41 +5,21 @@ const optionSchema = new mongoose.Schema({
     type: String,
     required: true
   }
-}, { _id: false });
-
-const exampleSchema = new mongoose.Schema({
-  input: { type: String, required: true },
-  output: { type: String, required: true },
-  explanation: { type: String }
-}, { _id: false });
-
-const testCaseSchema = new mongoose.Schema({
-  input: { type: String, required: true },
-  expectedOutput: { type: String, required: true }
-}, { _id: false });
-
-const codingDetailsSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  description: { type: String, required: true },
-  examples: [exampleSchema],
-  constraints: [String],
-  testCases: [testCaseSchema]
-}, { _id: false });
+});
 
 const questionSchema = new mongoose.Schema({
   questionText: {
     type: String,
     required: true
   },
-  questionType: {
+  type: {
     type: String,
-    enum: ['mcq', 'coding'],
-    required: true
+    default: 'mcq'
   },
-  options: [optionSchema], // only for MCQ
-  codingDetails: codingDetailsSchema, // only for coding
-  correctAnswer: mongoose.Schema.Types.Mixed // flexible: option text/id for MCQ, array or code for coding
-}, { _id: false });
+  options: [optionSchema], 
+  correctAnswer: { type: String, required: true }
+
+});
 
 const assessmentSchema = new mongoose.Schema({
   title: {
@@ -59,6 +39,7 @@ const assessmentSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
+   isMandatory: { type: Boolean, default: false },
   topics: {
     type: [String],
     required: true
@@ -67,7 +48,11 @@ const assessmentSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
-  questions: [questionSchema]
+  questions: [questionSchema],
+  codingQuestionIds: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'CodingQuestion'
+  }],
 }, {
   timestamps: true
 });

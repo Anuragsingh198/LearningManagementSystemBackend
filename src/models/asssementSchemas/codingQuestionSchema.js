@@ -8,6 +8,10 @@ const testCaseSchema = new mongoose.Schema({
 
 const codingQuestionSchema = new mongoose.Schema({
   title: { type: String, required: true },
+  type: {
+    type: String,
+    default: 'coding'
+  },
   description: { type: String, required: true },
   difficulty: { type: String, enum: ["Easy", "Medium", "Hard"], required: true },
   constraints: { type: String },
