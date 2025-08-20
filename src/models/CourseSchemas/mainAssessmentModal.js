@@ -44,6 +44,10 @@ const assessmentSchema = new mongoose.Schema({
     type: [String],
     required: true
   },
+  numberOfQuestions: {
+    type: Number,
+    required: true
+  },
   duration: {
     type: Number,
     required: true

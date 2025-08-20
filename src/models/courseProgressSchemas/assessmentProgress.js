@@ -1,29 +1,60 @@
 const mongoose = require("mongoose");
 
+const userAnswerSchema = new mongoose.Schema({
+  questionId: {
+    type: mongoose.Schema.Types.ObjectId, 
+    required: true 
+  },
+  selectedOption: {  // for MCQ
+    type: String
+  },
+  submittedCode: {   // for coding
+    type: String
+  }
+}, { _id: false });
+
 const assessmentProgressSchema = new mongoose.Schema({
-  userId: {
+  user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  testId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Test',
+  title: {
+    type: String,
+    required: true
+  },
+  assessment: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'Assessment',
+  required: true
+},
+  questions: {
+    type: [],
     required: true
   },
   status: {
     type: String,
-    enum: [ 'not-started','in-progress', 'passed', 'failed'],
+    enum: ['not-started','in-progress','submitted','passed','failed'],
     default: 'not-started'
+  },
+  startedAt: {
+    type: Date,
+  },
+  completedAt: {
+    type: Date
   },
   lastAttemptedTime: {
     type: Date,
     default: Date.now
   },
+  completeTestByDateAndTime:{
+    type: Date,
+    required: true
+  },
   score: {
     type: Number,
     default: 0,
-    min: 0,
+    min: 0
   },
   isPassed: {
     type: Boolean,
@@ -33,20 +64,8 @@ const assessmentProgressSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  yourAnswers: [{
-    questionId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Question',
-      required: true
-    },
-    selectedOption: { 
-      type: String,
-      required: true
-    }
-  }]
-}, { timestamps: true }); 
+  yourAnswers: [userAnswerSchema]
+}, { timestamps: true });
 
-const AssessmentProgress = mongoose.model('AssessmentProgress', testProgressSchema);
+const AssessmentProgress = mongoose.model('AssessmentProgress', assessmentProgressSchema);
 module.exports = AssessmentProgress;
-
-

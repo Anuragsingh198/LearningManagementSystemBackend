@@ -39,9 +39,9 @@ const getAllLanguages = async (req, res) => {
 const getQuestionById = async (req, res) => {
   try {
     const { questionId } = req.params;
-    console.log("this is the  question id : ", questionId)
+    // console.log("this is the  question id : ", questionId)
     const allQuestions = await CodingQuestion.find();
-    console.log(' this is  all the  questions : ', allQuestions);
+    // console.log(' this is  all the  questions : ', allQuestions);
     const question = await CodingQuestion.findById(questionId).populate('run_code_testcases');
 
     if (!question) {
@@ -273,8 +273,8 @@ const addAssessment = async (req, res) => {
       description,
       topics,
       duration,
-      mcqQuestions,
-      codingQuestions,
+      mcqQuestions = [],
+      codingQuestions = [],
       testType
     } = req.body;
 
@@ -288,6 +288,7 @@ const addAssessment = async (req, res) => {
         options: q.options.map(opt => ({ optionText: opt })),
         correctAnswer: q.correctAnswer
       }));
+      const numberOfQuestions = mcqQuestions.length + codingQuestions.length
       newAssessment = new Assessment({
         isMandatory,
         title,
@@ -295,18 +296,19 @@ const addAssessment = async (req, res) => {
         topics,
         duration,
         testType,
+        numberOfQuestions: numberOfQuestions,
         questions: formattedMcqQuestions,
         codingQuestionIds: codingQuestions
       });
 
       await newAssessment.save();
 
-      console.log('the new assessment stored in mongodb is: ', newAssessment)
+      // console.log('the new assessment stored in mongodb is: ', newAssessment)
 
     }
 
-       if (testType === 'coding') {
-
+      if (testType === 'coding') {
+      const numberOfQuestions = codingQuestions.length
       newAssessment = new Assessment({
         isMandatory,
         title,
@@ -314,17 +316,15 @@ const addAssessment = async (req, res) => {
         topics,
         duration,
         testType,
+        numberOfQuestions: numberOfQuestions,
         codingQuestionIds: codingQuestions
       });
 
       await newAssessment.save();
 
-      console.log('the new assessment stored in mongodb is: ', newAssessment)
+      // console.log('the new assessment stored in mongodb is: ', newAssessment)
 
     }
-
-
-    // Create new assessment
 
 
     return res.status(201).json({

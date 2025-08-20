@@ -23,6 +23,8 @@ const TestProgress = require("../models/courseProgressSchemas/testProgress");
 const VideoProgress = require("../models/courseProgressSchemas/videoProgress");
 const CourseProgress = require("../models/courseProgressSchemas/courseProgress");
 const Article = require("../models/CourseSchemas/articlesModel");
+const Assessment = require("../models/CourseSchemas/mainAssessmentModal");
+const AssessmentProgress = require("../models/courseProgressSchemas/assessmentProgress");
 const createCourse = expressAsyncHandler(async (req, res) => {
   try {
     const { title, description, category, price, compulsory , courseDuration , remark} = req.body;
@@ -1097,6 +1099,109 @@ const updateLastWatched = expressAsyncHandler(async (req, res) => {
   }
 });
 
+const getAllAssessments = async (req, res) => {
+  try {
+    const allAssessments = await Assessment.find()
+      .select('_id title description testType numberOfQuestions isMandatory topics duration'); 
+
+    res.status(200).json({
+      success: true,
+      data: allAssessments
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: 'Unable to fetch the assessments',
+      error: err.message
+    });
+  }
+};
+
+const startAssessment = async (req, res) => {
+  try {
+    const { assessmentId } = req.body;
+    const userId = req.user._id; 
+
+    // 1. Fetch assessment and populate coding questions
+    const assessment = await Assessment.findById(assessmentId)
+      .populate('codingQuestionIds')
+      .lean();
+
+    if (!assessment) {
+      return res.status(404).json({ success: false, message: "Assessment not found" });
+    }
+
+    const title = assessment.title
+
+    // 2. Prepare MCQ questions (strip out correct answers)
+    const mcqQuestions = assessment.questions.map(q => ({
+      _id: q._id,
+      questionText: q.questionText,
+      type: 'mcq',
+      options: q.options
+    }));
+
+    // 3. Prepare Coding Questions (send safe fields only)
+    const codingQuestions = assessment.codingQuestionIds.map(cq => ({
+      _id: cq._id,
+      title: cq.title,
+      description: cq.description,
+      type: 'coding',
+      difficulty: cq.difficulty,
+      constraints: cq.constraints,
+      sample_code: cq.sample_code,
+      language_id: cq.language_id,
+      run_code_testcases: cq.run_code_testcases // only show sample/public test cases
+      // ❌ do NOT include submit_code_testcases (hidden test cases for grading)
+    }));
+
+    const questions = [...mcqQuestions, ...codingQuestions];
+
+    // 4. Check if AssessmentProgress already exists
+    let progress = await AssessmentProgress.findOne({
+      user: userId,
+      assessment: assessmentId
+    });
+
+    if (progress) {
+      return res.status(200).json({
+        success: true,
+        message: "Assessment already started",
+        data: progress
+      });
+    }
+
+    // 5. If not, create new AssessmentProgress
+
+    const startedAt = new Date();
+    const completeTestByDateAndTime = new Date(startedAt.getTime() + assessment.duration * 60000); // duration in mins → ms
+    progress = new AssessmentProgress({
+      user: userId,
+      title: title,
+      assessment: assessmentId,
+      questions: questions,
+      status: 'in-progress',
+      startedAt: new Date(),
+      completeTestByDateAndTime
+    });
+
+    await progress.save();
+
+    return res.status(201).json({
+      success: true,
+      message: "Assessment started successfully",
+      data: progress
+    });
+
+  } catch (error) {
+    console.error("Error in startAssessment:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to start the test"
+    });
+  }
+};
+
 module.exports = {
   createCourse,
   createModule,
@@ -1119,5 +1224,7 @@ module.exports = {
   deleteModule,
   deleteTest,
   generateSASToken,
-  updateLastWatched
+  updateLastWatched,
+  getAllAssessments,
+  startAssessment
 };
