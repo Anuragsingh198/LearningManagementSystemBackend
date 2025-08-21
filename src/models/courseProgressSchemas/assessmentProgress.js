@@ -32,9 +32,12 @@ const assessmentProgressSchema = new mongoose.Schema({
     type: [],
     required: true
   },
+  totalQuestions: {
+    type: Number,
+  },
   status: {
     type: String,
-    enum: ['not-started','in-progress','submitted','passed','failed'],
+    enum: ['not-started','in-progress','passed','failed'],
     default: 'not-started'
   },
   startedAt: {

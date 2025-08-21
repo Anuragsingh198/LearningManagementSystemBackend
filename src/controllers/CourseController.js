@@ -1101,13 +1101,70 @@ const updateLastWatched = expressAsyncHandler(async (req, res) => {
 
 const getAllAssessments = async (req, res) => {
   try {
+    const userId = req.user._id; // assuming user is available from auth middleware
+
+    // get all assessments
     const allAssessments = await Assessment.find()
-      .select('_id title description testType numberOfQuestions isMandatory topics duration'); 
+      .select('_id title description testType numberOfQuestions isMandatory topics duration');
+
+    // get all progresses for this user
+    const userProgress = await AssessmentProgress.find({ user: userId }).select("assessment");
+
+    // create a set of assessmentIds that user has attempted
+    const attemptedSet = new Set(userProgress.map(p => p.assessment.toString()));
+
+    // add attempted flag to each assessment
+    const assessmentsWithAttempt = allAssessments.map(a => {
+      return {
+        ...a.toObject(),
+        attempted: attemptedSet.has(a._id.toString())
+      };
+    });
 
     res.status(200).json({
       success: true,
-      data: allAssessments
+      data: assessmentsWithAttempt
     });
+
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: 'Unable to fetch the assessments',
+      error: err.message
+    });
+  }
+};
+
+const getAttemptedAssessment = async (req, res) => {
+  try {
+    const userId = req.user._id; // assuming user is available from auth middleware
+    const {assessmentId} = req.body;
+
+        if (!assessmentId) {
+      return res.status(400).json({
+        success: false,
+        message: "Assessment ID is required"
+      });
+    }
+
+    const userProgress = await AssessmentProgress.findOne({
+      user: userId,
+      assessment: assessmentId
+    });
+
+
+    if(!userProgress){
+      return res.status(404).json({
+        success: false,
+        message: 'could not find attempted assessment'
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      data: userProgress
+    });
+
   } catch (err) {
     res.status(500).json({
       success: false,
@@ -1202,6 +1259,87 @@ const startAssessment = async (req, res) => {
   }
 };
 
+const submitAssessment = async (req, res) => {
+  try {
+    const { assessmentId, allAnswers } = req.body;
+    const userId = req.user._id;
+
+
+
+    let progress = await AssessmentProgress.findOne({
+      user: userId,
+      _id: assessmentId
+    });
+
+    console.log('the user id and progress id are: ', userId, assessmentId)
+
+    if (!progress) {
+      return res.status(404).json({
+        success: false,
+        message: "Progress not found for this assessment"
+      });
+    }
+      const progressAssessmentId = progress.assessment
+        const assessment = await Assessment.findById(progressAssessmentId).lean();
+    if (!assessment) {
+      return res.status(404).json({ success: false, message: "Assessment not found" });
+    }
+
+    // Map user's answers for quick lookup
+    const answersMap = {};
+    allAnswers.forEach(ans => {
+      answersMap[ans.question_id] = ans.option_id;
+    });
+
+    let correctCount = 0;
+    const updatedQuestions = assessment.questions.map(q => {
+      const userOptionId = answersMap[q._id.toString()];
+      const userOption = q.options.find(opt => opt._id.toString() === userOptionId);
+
+      const isCorrect = userOption && userOption.optionText === q.correctAnswer;
+      if (isCorrect) correctCount++;
+
+      return {
+        questionId: q._id,
+        questionText: q.questionText,
+        yourAnswer: userOption ? userOption.optionText : null,
+        correctAnswer: q.correctAnswer,
+        isCorrect
+      };
+    });
+
+    const totalQuestions = assessment.questions.length;
+    const score = Math.round((correctCount / totalQuestions) * 100);
+    const isPassed = score >= 75;
+
+    progress.questions = updatedQuestions;
+    progress.score = score;
+    progress.isPassed = isPassed;
+    progress.status = isPassed ? "passed" : "failed";
+    progress.totalQuestions = totalQuestions;
+    progress.yourAnswers = allAnswers.map(ans => ({
+  questionId: ans.question_id,
+  selectedOption: ans.option_id
+}));
+    progress.lastAttemptedTime = new Date();
+
+    await progress.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Assessment submitted successfully",
+      data: progress
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to submit the test'
+    });
+  }
+};
+
+
 module.exports = {
   createCourse,
   createModule,
@@ -1226,5 +1364,8 @@ module.exports = {
   generateSASToken,
   updateLastWatched,
   getAllAssessments,
-  startAssessment
+  startAssessment,
+  submitAssessment,
+  getAttemptedAssessment
+  
 };

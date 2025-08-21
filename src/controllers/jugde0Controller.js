@@ -21,7 +21,7 @@ const getAllLanguages = async (req, res) => {
       allowedLanguages.some(name => lang.name.toLowerCase().startsWith(name.toLowerCase()))
     );
 
-    console.log("Filtered Languages:", filteredLanguages);
+    // console.log("Filtered Languages:", filteredLanguages);
 
     res.status(200).json({
       success: true,
