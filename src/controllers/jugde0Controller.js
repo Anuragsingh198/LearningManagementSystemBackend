@@ -15,12 +15,19 @@ const getAllLanguages = async (req, res) => {
       }
     });
 
-    const allowedLanguages = ["Python", "C++", "Java", "C"];
+   const allowedLanguages = [
+      "C (GCC 7.4.0)",
+      "C++ (GCC 7.4.0)",
+      "C (GCC 9.2.0)",
+      "C++ (GCC 9.2.0)",
+      "Java (OpenJDK 13.0.1)",
+      "Python (3.8.1)"
+    ];
 
+    // Filter only these
     const filteredLanguages = data.filter(lang =>
-      allowedLanguages.some(name => lang.name.toLowerCase().startsWith(name.toLowerCase()))
+      allowedLanguages.includes(lang.name)
     );
-
     // console.log("Filtered Languages:", filteredLanguages);
 
     res.status(200).json({
@@ -165,8 +172,19 @@ const submitCode = async (req, res) => {
     const { code, languageId, questionId } = req.body;
 
     if (!code || !languageId || !questionId) {
-      return res.status(400).json({ success: false, message: "Missing required fields" });
-    }
+  const missingFields = [];
+  if (!code) missingFields.push("code");
+  if (!languageId) missingFields.push("languageId");
+  if (!questionId) missingFields.push("questionId");
+
+  return res.status(400).json({
+    success: false,
+    message: `Missing required field(s): ${missingFields.join(", ")}`
+  });
+}
+
+  // so i have to save the coding question in the coding answer field of assessment prgress in a particular format such that it matches frontend design, and then later...  format should be questionId, question text, your answer, is correct, testcased passed
+  // when i submit the assessment in course controller, i should check whether coding quesiton is in the coding answer field or not and then if it is there add it to the questions array, since the strucutre will be the same, need not to worry
 
     const question = await CodingQuestion.findById(questionId);
     if (!question || !question.submit_code_testcases) {
