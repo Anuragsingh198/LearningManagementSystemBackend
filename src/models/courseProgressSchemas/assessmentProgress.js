@@ -28,6 +28,10 @@ const assessmentProgressSchema = new mongoose.Schema({
   ref: 'Assessment',
   required: true
 },
+duration: {
+  type: Number,
+  required: true
+},
   questions: {
     type: [],
     required: true

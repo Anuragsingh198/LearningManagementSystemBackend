@@ -1235,6 +1235,7 @@ const startAssessment = async (req, res) => {
     progress = new AssessmentProgress({
       user: userId,
       title: title,
+      duration: assessment.duration,
       assessment: assessmentId,
       questions: questions,
       status: 'in-progress',
@@ -1251,7 +1252,7 @@ const startAssessment = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error in startAssessment:", error);
+    console.error("Error in starting assessment:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to start the test"
