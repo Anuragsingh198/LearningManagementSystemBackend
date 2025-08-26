@@ -138,6 +138,9 @@ const runCode = async (req, res) => {
       console.log(JSON.stringify(data, null, 2));
 
       results = data.submissions || data;
+      console.log('=== Results from Judge0 ===')
+      console.log(results)
+
       if (results.every(r => r.status?.id >= 3)) break;
       await new Promise(r => setTimeout(r, 500));
     }
@@ -145,7 +148,13 @@ const runCode = async (req, res) => {
     const finalResults = results.map((r, i) => ({
       testcase_input: test_cases[i].input,
       expected_output: test_cases[i].expected_output,
+      compile_output: r.compile_output
+  ? Buffer.from(r.compile_output, "base64").toString()
+  : null,
       actual_output: r.stdout ? Buffer.from(r.stdout, "base64").toString() : null,
+      stderr: r.stderr
+    ? Buffer.from(r.stderr, "base64").toString()
+    : null, 
       status: r.status?.description
     }));
 
