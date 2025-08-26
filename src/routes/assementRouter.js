@@ -5,8 +5,8 @@ const { getAllAssessments, startAssessment, submitAssessment, getAttemptedAssess
 const assementRouter = express.Router();
 
 assementRouter.get('/get-languages', getAllLanguages);  
-assementRouter.post('/submit-code', submitCode);
-assementRouter.post('/run-code',     runCode);
+assementRouter.post('/submit-code', protect, submitCode);
+assementRouter.post('/run-code',  protect,   runCode);
 assementRouter.get('/allQuestions', protect, isInstructor, fetchAllCodingQuestions);    
 assementRouter.post('/add-assessment', protect,  addAssessment);    
 assementRouter.get('/get-all-assessments', protect, getAllAssessments);    

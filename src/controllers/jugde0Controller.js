@@ -4,6 +4,7 @@ const expressAsyncHandler = require("express-async-handler");
 const judge0ServerUrl = process.env.JUDGE0_URL
 const CodingQuestion = require('../models/asssementSchemas/codingQuestionSchema');
 const Assessment = require("../models/CourseSchemas/mainAssessmentModal");
+const AssessmentProgress = require("../models/courseProgressSchemas/assessmentProgress");
 console.log('this is judge)url : ', judge0ServerUrl);
 const getAllLanguages = async (req, res) => {
   try {
@@ -178,13 +179,18 @@ const runCode = async (req, res) => {
 
 const submitCode = async (req, res) => {
   try {
-    const { code, languageId, questionId } = req.body;
+    const { code, languageId, questionId, assessmentId } = req.body;
+    const userId = req.user._id;
 
-    if (!code || !languageId || !questionId) {
+
+    if (!code || !languageId || !questionId || !assessmentId || !userId) {
   const missingFields = [];
   if (!code) missingFields.push("code");
   if (!languageId) missingFields.push("languageId");
   if (!questionId) missingFields.push("questionId");
+  if (!assessmentId) missingFields.push("assessmentId");
+  if (!userId) missingFields.push("userId");
+
 
   return res.status(400).json({
     success: false,
@@ -192,13 +198,15 @@ const submitCode = async (req, res) => {
   });
 }
 
-  // so i have to save the coding question in the coding answer field of assessment prgress in a particular format such that it matches frontend design, and then later...  format should be questionId, question text, your answer, is correct, testcased passed
-  // when i submit the assessment in course controller, i should check whether coding quesiton is in the coding answer field or not and then if it is there add it to the questions array, since the strucutre will be the same, need not to worry
 
     const question = await CodingQuestion.findById(questionId);
     if (!question || !question.submit_code_testcases) {
       return res.status(404).json({ success: false, message: "Question or test cases not found" });
     }
+
+    console.log("=== coding question for submit is ===")
+    console.log("coding question is: ", question)
+
 
     // Prepare Judge0 batch payload (Base64 encoded)
     const submissionsPayload = {
@@ -262,6 +270,34 @@ const submitCode = async (req, res) => {
         ? Buffer.from(r.expected_output, "base64").toString("utf-8")
         : null
     }));
+
+  // so we add the coding question in a particular format to the progress.question, first we check whether the same question is there or not in the array if it is there then we replace it, otherwise we just add it
+
+  // we have to find the coding question
+
+      let progress = await AssessmentProgress.findOne({
+        user: userId,
+        assessment: assessmentId
+      });
+
+      console.log('=== the assessment progress is ===')
+      console.log('progress is: ', progress)
+
+      // we will find the coding question in progress.questions, and create a new payload of the type questionId, type: 'coding' (this is hard coded), questionText, yourAnswer, isCorrect, total_test_Cases, test_cases_passed and we'll just push it in the array
+
+      //  what we do is when we are starting the test and call the startAssessment controller , then only we will fill the progress.questions with the coding question text, like this "{
+// 	"questionId": "1243asfd4312",
+// 	"type": "coding",
+// 	"questionText": "what is fibonacci",
+// 	"yourAnswer": "",
+	
+// }" and here in the submit code controller, we will find the coding question in progress.questions it via question id and then make it that kind of object... questionId, type: 'coding' (this is hard coded), questionText, yourAnswer, isCorrect, total_test_Cases, test_cases_passed and then update it in the array, 
+
+      // so in this way if the user has not answered the question, the question will still be visible in the final result, but answer will not be ther
+
+  
+
+
 
     return res.status(200).json({
       success: true,
