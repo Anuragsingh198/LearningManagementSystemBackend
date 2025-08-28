@@ -1015,21 +1015,40 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
   }
 });
 
+// const generateSASToken = expressAsyncHandler(async (req, res) => {
+//   const blobName = req.params.blobName;
+
+//   console.log("Generating SAS token for blob:", blobName);
+//   const hours = parseInt(req.query.hours) || 1;
+//   const expiresInMinutes = hours * 60;
+
+//   try {
+//     const sasToken = await generateSasUrl({ blobName, expiresInMinutes });
+//     res.status(200).json({ success: true, sasToken });
+//   } catch (error) {
+//     console.error('Error generating SAS token:', error);
+//     res.status(500).json({ success: false, message: 'Error generating SAS token' });
+//   }
+// });
+
 const generateSASToken = expressAsyncHandler(async (req, res) => {
-  const blobName = req.params.blobName;
+    const blobName = req.query.blobName; // get from query
+    if (!blobName) return res.status(400).json({ success: false, message: 'blobName is required' });
 
-  console.log("Generating SAS token for blob:", blobName);
-  const hours = parseInt(req.query.hours) || 1;
-  const expiresInMinutes = hours * 60;
+    console.log("Generating SAS token for blob:", blobName);
 
-  try {
-    const sasToken = await generateSasUrl({ blobName, expiresInMinutes });
-    res.status(200).json({ success: true, sasToken });
-  } catch (error) {
-    console.error('Error generating SAS token:', error);
-    res.status(500).json({ success: false, message: 'Error generating SAS token' });
-  }
+    const hours = parseInt(req.query.hours) || 1;
+    const expiresInMinutes = hours * 60;
+
+    try {
+        const sasToken = await generateSasUrl({ blobName, expiresInMinutes });
+        res.status(200).json({ success: true, sasToken });
+    } catch (error) {
+        console.error('Error generating SAS token:', error);
+        res.status(500).json({ success: false, message: 'Error generating SAS token' });
+    }
 });
+
 
 const updateLastWatched = expressAsyncHandler(async (req, res) => {
   const { courseId, moduleId, currentTime, currentVideoIndex, videoId } = req.body;
@@ -1315,6 +1334,7 @@ const submitAssessment = async (req, res) => {
 
       return {
         questionId: q._id,
+        type: 'mcq',
         questionText: q.questionText,
         yourAnswer: userOption ? userOption.optionText : null,
         correctAnswer: q.correctAnswer,
