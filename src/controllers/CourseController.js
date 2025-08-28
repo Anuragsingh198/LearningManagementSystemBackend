@@ -14,7 +14,7 @@ const { uploadToAzureBlob, deleteFromAzureBlob, uploadStreamToAzureBlob } = requ
 const { generateBlobSas, generateSasUrl } = require("../utils/generateSasUrl");
 // const { getVideoDurationInSeconds } = require('get-video-duration');
 const { bufferToStream } = require("../utils/videoBuffer");
-const {upload} = require("../middlewares/uploadMiddleware");
+const { upload } = require("../middlewares/uploadMiddleware");
 const { getDurationFromBuffer } = require("../utils/getVideoDuration");
 const courseProgress = require("../models/courseProgressSchemas/courseProgress");
 const ModuleProgress = require("../models/courseProgressSchemas/moduleProgress");
@@ -27,7 +27,7 @@ const Assessment = require("../models/CourseSchemas/mainAssessmentModal");
 const AssessmentProgress = require("../models/courseProgressSchemas/assessmentProgress");
 const createCourse = expressAsyncHandler(async (req, res) => {
   try {
-    const { title, description, category, price, compulsory , courseDuration , remark} = req.body;
+    const { title, description, category, price, compulsory, courseDuration, remark } = req.body;
     const file = req.file;
     if (!file) {
       return res.status(400).json({ success: false, message: "Thumbnail is required" });
@@ -48,10 +48,10 @@ const createCourse = expressAsyncHandler(async (req, res) => {
       instructor: user._id,
       instructorName: user.name,
       thumbnail: thumbnail.url,
-      thumbnailBlobName:thumbnail.blobName,
+      thumbnailBlobName: thumbnail.blobName,
       compulsory: compulsory,
-      courseDuration:courseDuration,
-      remark:remark,
+      courseDuration: courseDuration,
+      remark: remark,
     });
 
 
@@ -143,7 +143,7 @@ const createVideo = expressAsyncHandler(async (req, res) => {
     console.error('Failed to get duration:', err);
     return res.status(500).json({ success: false, message: 'Failed to get video duration' });
   }
-  
+
   const videoBlob = await uploadStreamToAzureBlob(req.file.buffer, req.file.originalname, req.file.mimetype, 'videos');
   console.log('Uploaded video:', videoBlob);
   const video = await Video.create({
@@ -164,8 +164,8 @@ const createVideo = expressAsyncHandler(async (req, res) => {
 });
 
 const createArticle = expressAsyncHandler(async (req, res) => {
-   const { title, description, courseId, moduleId } = req.body;
-   console.log('from create article', title, description, courseId, moduleId)
+  const { title, description, courseId, moduleId } = req.body;
+  console.log('from create article', title, description, courseId, moduleId)
 
   if (!req.file || !title || !courseId || !moduleId) {
     return res.status(400).json({ success: false, message: 'All fields are required' });
@@ -281,8 +281,8 @@ const getModulesByCourseId = expressAsyncHandler(async (req, res) => {
 });
 
 const getCourseByCourseId = expressAsyncHandler(async (req, res) => {
-  const {courseId } = req.params;
-  console.log("this is the  course id : " , courseId);
+  const { courseId } = req.params;
+  console.log("this is the  course id : ", courseId);
   if (!courseId) {
     return res
       .status(400)
@@ -446,12 +446,12 @@ const testSubmit = expressAsyncHandler(async (req, res) => {
         moduleProgress.totalVideos === moduleProgress.completedVideos &&
         moduleProgress.totalTests === moduleProgress.completedTest
       );
-      
-       if(isModuleCompleted){
+
+      if (isModuleCompleted) {
         moduleProgress.status = 'completed'
         await moduleProgress.save();
-       }
-       
+      }
+
       if (isModuleCompleted) {
         const courseProgress = await CourseProgress.findOne({
           userId,
@@ -586,23 +586,23 @@ const updateVideoCompletion = expressAsyncHandler(async (req, res) => {
   try {
     const videoProgress = await VideoProgress.findOne({ userId, courseId, moduleId, videoId });
 
-    if(!courseId){
-       return res.status(400).json({
-      success: false,
-      message: "ModuleId is missing"
-    });
+    if (!courseId) {
+      return res.status(400).json({
+        success: false,
+        message: "ModuleId is missing"
+      });
     }
-     if( !moduleId){
-       return res.status(400).json({
-      success: false,
-      message: "CourseId is missing"
-    });
+    if (!moduleId) {
+      return res.status(400).json({
+        success: false,
+        message: "CourseId is missing"
+      });
     }
- if(!videoId){
-       return res.status(400).json({
-      success: false,
-      message: " videoId is missing"
-    });
+    if (!videoId) {
+      return res.status(400).json({
+        success: false,
+        message: " videoId is missing"
+      });
     }
 
 
@@ -637,22 +637,22 @@ const updateVideoCompletion = expressAsyncHandler(async (req, res) => {
       }
     }
 
-    const updatedVideoProgress = await VideoProgress.find({userId, courseId , moduleId});
+    const updatedVideoProgress = await VideoProgress.find({ userId, courseId, moduleId });
     const updatedModuleProgress = await ModuleProgress.find({ userId, courseId });
     const newTestProgress = await TestProgress.find({ userId, courseId, moduleId });
     const courseProgress = await CourseProgress.findOne({ userId, courseId });
-    const oneVideoProgress = await VideoProgress.find({_id:videoProgress._id});
-    const oneModuleProgress =  await ModuleProgress.findOne({userId, courseId, moduleId})
+    const oneVideoProgress = await VideoProgress.find({ _id: videoProgress._id });
+    const oneModuleProgress = await ModuleProgress.findOne({ userId, courseId, moduleId })
     return res.status(200).json({
-  success: true,
-  message: 'Video marked as completed',
-  videoProgress: updatedVideoProgress, 
-  videoProgressItem: oneVideoProgress[0], 
-  moduleProgress: updatedModuleProgress,
-  testProgress: newTestProgress,
-  courseProgress, 
-  oneModuleProgress
-});
+      success: true,
+      message: 'Video marked as completed',
+      videoProgress: updatedVideoProgress,
+      videoProgressItem: oneVideoProgress[0],
+      moduleProgress: updatedModuleProgress,
+      testProgress: newTestProgress,
+      courseProgress,
+      oneModuleProgress
+    });
 
   } catch (error) {
     console.error('Error marking video as complete:', error);
@@ -770,7 +770,7 @@ const checkVideoOrTestInUserProgressSchema = expressAsyncHandler(async (req, res
     const testExists = moduleProgress.testStatus.some(
       (test) => test.test.toString() === testId
     );
-  
+
 
 
     if (testExists) {
@@ -805,8 +805,8 @@ const checkVideoOrTestInUserProgressSchema = expressAsyncHandler(async (req, res
 
 });
 
-const  deleteCourse = expressAsyncHandler(async(req, res)=>{
-  const {courseId} = req.params;
+const deleteCourse = expressAsyncHandler(async (req, res) => {
+  const { courseId } = req.params;
   const userId = req.user._id.toString();
   console.log("user id id : ", userId);
   if (!mongoose.Types.ObjectId.isValid(courseId)) {
@@ -814,7 +814,7 @@ const  deleteCourse = expressAsyncHandler(async(req, res)=>{
   }
   try {
     const course = await Course.findById(courseId).populate('modules');
-    console.log("course istructor is : " , course.instructor)
+    console.log("course istructor is : ", course.instructor)
     if (!course) {
       return res.status(404).json({ success: false, message: "Course not found." });
     }
@@ -823,30 +823,30 @@ const  deleteCourse = expressAsyncHandler(async(req, res)=>{
       console.log("this is called ")
       return res.status(403).json({ success: false, message: "You are not authorized to delete this course." });
     }
-    
-    for(const modules of course.modules){
-      const  module = await Module.findById(modules._id).populate(['videos', 'tests']);
-      if(module){
-        for(const video of module.videos){
-          await deleteFromAzureBlob( video.videoBlobName);
+
+    for (const modules of course.modules) {
+      const module = await Module.findById(modules._id).populate(['videos', 'tests']);
+      if (module) {
+        for (const video of module.videos) {
+          await deleteFromAzureBlob(video.videoBlobName);
           await Video.findByIdAndDelete(video._id);
         }
-        for(const test of module.tests){
-          await deleteFromAzureBlob( test.testBlobName);
+        for (const test of module.tests) {
+          await deleteFromAzureBlob(test.testBlobName);
           await Test.findByIdAndDelete(test._id);
         }
       }
       await Module.findByIdAndDelete(module._id);
     }
-    await deleteFromAzureBlob( course.thumbnailBlobName);
-    await User.updateMany(  
+    await deleteFromAzureBlob(course.thumbnailBlobName);
+    await User.updateMany(
       { courses: courseId },
       { $pull: { courses: courseId } }
     );
     await Course.findByIdAndDelete(courseId);
     await Progress.deleteMany({ course: courseId });
 
-    res.status(200).json({ success: true, message: "Course deleted successfully."  });
+    res.status(200).json({ success: true, message: "Course deleted successfully." });
   } catch (error) {
     console.error("Error deleting course:", error);
     res.status(500).json({ success: false, message: "Server error." });
@@ -1000,7 +1000,7 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
       certificateType,
       issueDate: new Date(),
       isGenerated: true,
-      certificateHtml: html, 
+      certificateHtml: html,
     });
 
     res.status(200).json({
@@ -1013,11 +1013,11 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
     console.error('Certificate generation failed:', error);
     res.status(500).json({ success: false, message: 'Error generating certificate' });
   }
-}); 
+});
 
 const generateSASToken = expressAsyncHandler(async (req, res) => {
   const blobName = req.params.blobName;
-  
+
   console.log("Generating SAS token for blob:", blobName);
   const hours = parseInt(req.query.hours) || 1;
   const expiresInMinutes = hours * 60;
@@ -1138,9 +1138,9 @@ const getAllAssessments = async (req, res) => {
 const getAttemptedAssessment = async (req, res) => {
   try {
     const userId = req.user._id; // assuming user is available from auth middleware
-    const {assessmentId} = req.body;
+    const { assessmentId } = req.body;
 
-        if (!assessmentId) {
+    if (!assessmentId) {
       return res.status(400).json({
         success: false,
         message: "Assessment ID is required"
@@ -1153,7 +1153,7 @@ const getAttemptedAssessment = async (req, res) => {
     });
 
 
-    if(!userProgress){
+    if (!userProgress) {
       return res.status(404).json({
         success: false,
         message: 'could not find attempted assessment'
@@ -1177,7 +1177,7 @@ const getAttemptedAssessment = async (req, res) => {
 const startAssessment = async (req, res) => {
   try {
     const { assessmentId } = req.body;
-    const userId = req.user._id; 
+    const userId = req.user._id;
 
     // 1. Fetch assessment and populate coding questions
     const assessment = await Assessment.findById(assessmentId)
@@ -1208,8 +1208,12 @@ const startAssessment = async (req, res) => {
       constraints: cq.constraints,
       sample_code: cq.sample_code,
       language_id: cq.language_id,
-      run_code_testcases: cq.run_code_testcases // only show sample/public test cases
+      run_code_testcases: cq.run_code_testcases, // only show sample/public test cases
       // ❌ do NOT include submit_code_testcases (hidden test cases for grading)
+      yourCodingAnswer: "",
+      total_test_cases: null,
+      total_test_cases_passed: null,
+      isCorrect: false,
     }));
 
     const questions = [...mcqQuestions, ...codingQuestions];
@@ -1265,14 +1269,12 @@ const submitAssessment = async (req, res) => {
     const { assessmentId, allAnswers } = req.body;
     const userId = req.user._id;
 
-
-
     let progress = await AssessmentProgress.findOne({
       user: userId,
       _id: assessmentId
     });
 
-    console.log('the user id and progress id are: ', userId, assessmentId)
+    // console.log('the user id and progress id are: ', userId, assessmentId)
 
     if (!progress) {
       return res.status(404).json({
@@ -1280,11 +1282,22 @@ const submitAssessment = async (req, res) => {
         message: "Progress not found for this assessment"
       });
     }
-      const progressAssessmentId = progress.assessment
-        const assessment = await Assessment.findById(progressAssessmentId).lean();
+
+    console.log('== the progress is ==')
+    console.log('the progress as of now mid assessment is:', progress)
+    const codingQuestions = progress.questions.filter(q => q.type === 'coding');
+
+
+
+    const progressAssessmentId = progress.assessment
+    const assessment = await Assessment.findById(progressAssessmentId).lean();
     if (!assessment) {
       return res.status(404).json({ success: false, message: "Assessment not found" });
     }
+
+    // now the progress has coding questions and answers... i have to retain them and then add the updated questions
+
+
 
     // Map user's answers for quick lookup
     const answersMap = {};
@@ -1309,19 +1322,62 @@ const submitAssessment = async (req, res) => {
       };
     });
 
-    const totalQuestions = assessment.questions.length;
-    const score = Math.round((correctCount / totalQuestions) * 100);
-    const isPassed = score >= 75;
+    // now we get an array of updated questions 
 
-    progress.questions = updatedQuestions;
+    console.log('the updated array of objects is updatedQuestions: ', updatedQuestions)
+
+    const updatedQuestionsWithCodingAndMcqAnswer = [
+      ...updatedQuestions,
+      ...codingQuestions
+    ];
+
+    const totalMcqQuestions = assessment.questions.length;
+
+    const mcqMarks = correctCount;           // 1 mark per correct MCQ
+    const mcqMax = totalMcqQuestions * 1;
+
+    let codingMarks = 0;
+
+    const codingCount = codingQuestions.length;
+const codingMax = codingCount * 5;
+
+for (const cq of codingQuestions) {
+  const total = Number(cq.total_test_cases) || 0;
+  const passed = Number(cq.total_test_cases_passed) || 0;
+
+  let marksForThis = 0;
+  if (total > 0) {
+    marksForThis = (passed / total) * 5;    // partial marks
+  } else {
+    // fallback if no test cases recorded; adjust if you prefer 0
+    marksForThis = cq.isCorrect ? 5 : 0;
+  }
+
+  codingMarks += marksForThis;
+
+  // (optional) persist per-question marks for UI/debug
+  // cq.marksAwarded = Number(marksForThis.toFixed(2));
+  // cq.maxMarks = 5;
+}
+
+const totalMarks = mcqMarks + codingMarks;
+const maxMarks = mcqMax + codingMax;
+
+
+const score = maxMarks > 0 ? Math.round((totalMarks / maxMarks) * 100) : 0;
+const isPassed = score >= 75; // pass/fail on combined weighted score
+
+    const totalQuestions = totalMcqQuestions + codingCount;
+
+    progress.questions = updatedQuestionsWithCodingAndMcqAnswer;
     progress.score = score;
     progress.isPassed = isPassed;
     progress.status = isPassed ? "passed" : "failed";
     progress.totalQuestions = totalQuestions;
     progress.yourAnswers = allAnswers.map(ans => ({
-  questionId: ans.question_id,
-  selectedOption: ans.option_id
-}));
+      questionId: ans.question_id,
+      selectedOption: ans.option_id
+    }));
     progress.lastAttemptedTime = new Date();
 
     await progress.save();
@@ -1368,5 +1424,5 @@ module.exports = {
   startAssessment,
   submitAssessment,
   getAttemptedAssessment
-  
+
 };

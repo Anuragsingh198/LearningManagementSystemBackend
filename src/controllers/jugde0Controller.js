@@ -16,7 +16,7 @@ const getAllLanguages = async (req, res) => {
       }
     });
 
-   const allowedLanguages = [
+    const allowedLanguages = [
       "C (GCC 7.4.0)",
       "C++ (GCC 7.4.0)",
       "C (GCC 9.2.0)",
@@ -150,12 +150,12 @@ const runCode = async (req, res) => {
       testcase_input: test_cases[i].input,
       expected_output: test_cases[i].expected_output,
       compile_output: r.compile_output
-  ? Buffer.from(r.compile_output, "base64").toString()
-  : null,
+        ? Buffer.from(r.compile_output, "base64").toString()
+        : null,
       actual_output: r.stdout ? Buffer.from(r.stdout, "base64").toString() : null,
       stderr: r.stderr
-    ? Buffer.from(r.stderr, "base64").toString()
-    : null, 
+        ? Buffer.from(r.stderr, "base64").toString()
+        : null,
       status: r.status?.description
     }));
 
@@ -184,19 +184,19 @@ const submitCode = async (req, res) => {
 
 
     if (!code || !languageId || !questionId || !assessmentId || !userId) {
-  const missingFields = [];
-  if (!code) missingFields.push("code");
-  if (!languageId) missingFields.push("languageId");
-  if (!questionId) missingFields.push("questionId");
-  if (!assessmentId) missingFields.push("assessmentId");
-  if (!userId) missingFields.push("userId");
+      const missingFields = [];
+      if (!code) missingFields.push("code");
+      if (!languageId) missingFields.push("languageId");
+      if (!questionId) missingFields.push("questionId");
+      if (!assessmentId) missingFields.push("assessmentId");
+      if (!userId) missingFields.push("userId");
 
 
-  return res.status(400).json({
-    success: false,
-    message: `Missing required field(s): ${missingFields.join(", ")}`
-  });
-}
+      return res.status(400).json({
+        success: false,
+        message: `Missing required field(s): ${missingFields.join(", ")}`
+      });
+    }
 
 
     const question = await CodingQuestion.findById(questionId);
@@ -271,39 +271,61 @@ const submitCode = async (req, res) => {
         : null
     }));
 
-  // so we add the coding question in a particular format to the progress.question, first we check whether the same question is there or not in the array if it is there then we replace it, otherwise we just add it
 
-  // we have to find the coding question
+    const safeResults = Array.isArray(results) ? results : [];
+    const total = safeResults.length;
+    const passed = safeResults.filter(r => r.status?.id === 3).length;
 
-      let progress = await AssessmentProgress.findOne({
-        user: userId,
-        assessment: assessmentId
-      });
+    console.log('=== total and passed test cases ===')
+    console.log('safe results:', safeResults)
+    console.log('total test cases:', total)
+    console.log('total test cases passed:', passed)
 
-      console.log('=== the assessment progress is ===')
-      console.log('progress is: ', progress)
 
-      // we will find the coding question in progress.questions, and create a new payload of the type questionId, type: 'coding' (this is hard coded), questionText, yourAnswer, isCorrect, total_test_Cases, test_cases_passed and we'll just push it in the array
+    let progress = await AssessmentProgress.findOne({
+      user: userId,
+      assessment: assessmentId
+    });
 
-      //  what we do is when we are starting the test and call the startAssessment controller , then only we will fill the progress.questions with the coding question text, like this "{
-// 	"questionId": "1243asfd4312",
-// 	"type": "coding",
-// 	"questionText": "what is fibonacci",
-// 	"yourAnswer": "",
-	
-// }" and here in the submit code controller, we will find the coding question in progress.questions it via question id and then make it that kind of object... questionId, type: 'coding' (this is hard coded), questionText, yourAnswer, isCorrect, total_test_Cases, test_cases_passed and then update it in the array, 
+    console.log('the progress fetched from assessment progress is:', progress)
 
-      // so in this way if the user has not answered the question, the question will still be visible in the final result, but answer will not be ther
+    if (!progress) {
+      return res.status(404).json({
+        success: false, 
+        message: 'Assessment progress not found'
+      })
+    }
 
-  
+    const existingIndex = progress.questions.findIndex(
+      q => q._id.toString() === questionId.toString()
+    );
 
+    console.log('existing index is: ', existingIndex)
+
+    if (existingIndex === -1) {
+  return res.status(404).json({
+    success: false,
+    message: "Question not found in assessment progress"
+  });
+}
+
+    progress.questions[existingIndex].yourCodingAnswer = code;
+    progress.questions[existingIndex].total_test_cases = total;
+    progress.questions[existingIndex].total_test_cases_passed = passed;
+    progress.questions[existingIndex].isCorrect = total === passed;
+
+    progress.markModified(`questions.${existingIndex}`); // ahh... because mongodb doesnt refelct nested array updates, so we have to explicitly tell it otherwiese... we have to use $set
+
+    await progress.save();
+
+    console.log('progress after all the operations is: ', progress)
 
 
     return res.status(200).json({
       success: true,
       message: "Code submitted successfully",
       submissions: submissionsPayload.submissions,
-      results
+      results, 
     });
 
   } catch (error) {
@@ -341,7 +363,7 @@ const addAssessment = async (req, res) => {
       testType
     } = req.body;
 
-     let newAssessment;
+    let newAssessment;
 
     // Map mcqQuestions into schema format
     if (testType === 'mcq' || testType === 'both') {
@@ -370,7 +392,7 @@ const addAssessment = async (req, res) => {
 
     }
 
-      if (testType === 'coding') {
+    if (testType === 'coding') {
       const numberOfQuestions = codingQuestions.length
       newAssessment = new Assessment({
         isMandatory,
