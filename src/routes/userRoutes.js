@@ -2,18 +2,20 @@ const express = require('express');
 const { registerUser, loginUser, getEnrolledEmployees, resetPassword, generateOtpHandler, verifyOtpHandler } = require('../controllers/authController');
 const { protect, isEmployee, isInstructor } = require('../middlewares/authmiddleware');
 const {  enrollCourse, moduleProgress, videoProgress, testProgress, getCoursesByUserId, getCourseWithProgress} = require('../controllers/userControllers');
-const { testSubmit, createUserProgressForNewModule, checkVideoOrTestInUserProgressSchema, getCourseByCourseId, updateVideoCompletion } = require('../controllers/CourseController');
+const { testSubmit, createUserProgressForNewModule, checkVideoOrTestInUserProgressSchema, getCourseByCourseId, updateVideoCompletion, moduleProgressChecker } = require('../controllers/CourseController');
 
 const useRoutes = express.Router();
 
 useRoutes.post('/register', registerUser);
 useRoutes.post('/login', loginUser);
-useRoutes.post('/test-submit' ,protect,isEmployee , testSubmit)
+useRoutes.post('/test-submit' ,protect, isEmployee , testSubmit)
 useRoutes.post('/enroll-course' , protect , isEmployee ,enrollCourse)
 useRoutes.post('/course-progress' ,protect,  getCourseWithProgress);
 useRoutes.post('/module-progress' , protect, isEmployee , moduleProgress);
 useRoutes.post('/video-progress' , protect, isEmployee , videoProgress);
 useRoutes.post('/test-progress' , protect, isEmployee , testProgress);
+useRoutes.post('/module-video-progress' , protect, isEmployee , moduleProgressChecker);
+
 
 useRoutes.get('/profile', protect, (req, res) => {
     res.json({

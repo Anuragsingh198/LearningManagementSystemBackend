@@ -68,15 +68,15 @@ const createCourse = expressAsyncHandler(async (req, res) => {
 
 
 const createModule = expressAsyncHandler(async (req, res) => {
-  console.log("➡️ createModule controller triggered");
+  // console.log("➡️ createModule controller triggered");
   try {
     const { title, description, courseId } = req.body;
-    console.log(
-      "this is the   data from the   creteMdule  Controller, : ",
-      title,
-      description,
-      courseId
-    );
+    // console.log(
+    //   "this is the   data from the   creteMdule  Controller, : ",
+    //   title,
+    //   description,
+    //   courseId
+    // );
     const user = await User.findById(req.user._id);
 
     if (!user || user.role !== "instructor") {
@@ -138,14 +138,14 @@ const createVideo = expressAsyncHandler(async (req, res) => {
   let duration;
   try {
     duration = await getDurationFromBuffer(req.file.buffer);
-    console.log('Video duration:', duration);
+    // console.log('Video duration:', duration);
   } catch (err) {
     console.error('Failed to get duration:', err);
     return res.status(500).json({ success: false, message: 'Failed to get video duration' });
   }
 
   const videoBlob = await uploadStreamToAzureBlob(req.file.buffer, req.file.originalname, req.file.mimetype, 'videos');
-  console.log('Uploaded video:', videoBlob);
+  // console.log('Uploaded video:', videoBlob);
   const video = await Video.create({
     title,
     description,
@@ -165,7 +165,7 @@ const createVideo = expressAsyncHandler(async (req, res) => {
 
 const createArticle = expressAsyncHandler(async (req, res) => {
   const { title, description, courseId, moduleId } = req.body;
-  console.log('from create article', title, description, courseId, moduleId)
+  // console.log('from create article', title, description, courseId, moduleId)
 
   if (!req.file || !title || !courseId || !moduleId) {
     return res.status(400).json({ success: false, message: 'All fields are required' });
@@ -184,7 +184,7 @@ const createArticle = expressAsyncHandler(async (req, res) => {
 
   const pdfBlob = await uploadStreamToAzureBlob(req.file.buffer, req.file.originalname, req.file.mimetype, 'articles');
 
-  console.log('Uploaded Article:', pdfBlob);
+  // console.log('Uploaded Article:', pdfBlob);
 
   const article = await Article.create({
     title,
@@ -207,7 +207,7 @@ const createArticle = expressAsyncHandler(async (req, res) => {
 const createTest = expressAsyncHandler(async (req, res) => {
   const { testData } = req.body;
 
-  console.log("test data  is : ", testData);
+  // console.log("test data  is : ", testData);
   try {
     if (!testData) {
       return res.status(400).json({
@@ -282,7 +282,7 @@ const getModulesByCourseId = expressAsyncHandler(async (req, res) => {
 
 const getCourseByCourseId = expressAsyncHandler(async (req, res) => {
   const { courseId } = req.params;
-  console.log("this is the  course id : ", courseId);
+  // console.log("this is the  course id : ", courseId);
   if (!courseId) {
     return res
       .status(400)
@@ -408,6 +408,8 @@ const testSubmit = expressAsyncHandler(async (req, res) => {
       });
     }
 
+    // console.log('test progress before updating info: ', testProgress)
+
     testProgress.status = isPassed ? 'completed' : 'failed';
     testProgress.lastAttemptedTime = new Date();
     testProgress.score = score;
@@ -417,13 +419,17 @@ const testSubmit = expressAsyncHandler(async (req, res) => {
 
     await testProgress.save();
 
+    // console.log('test progress after saving is:  ', testProgress)
+
     let moduleProgress = await ModuleProgress.findOne({
       userId,
       courseId,
       moduleId,
     });
 
-    if (isPassed && moduleProgress) {
+    // console.log('module progress initially is: '. moduleProgress)
+
+    if (isPassed && moduleProgress) {  // so we are checking by finding the tesprogress again 
       const alreadyCompleted = await TestProgress.findOne({
         userId,
         courseId,
@@ -434,6 +440,13 @@ const testSubmit = expressAsyncHandler(async (req, res) => {
 
       if (alreadyCompleted && moduleProgress.completedTest < moduleProgress.totalTests) {
         moduleProgress.completedTest += 1;
+
+        // console.log('module progress total videos are:',  moduleProgress.totalVideos)
+        // console.log('module progress total tests are:',  moduleProgress.totalTests)
+        // console.log('== == == == ==')
+        // console.log('module progress completed videos are:',  moduleProgress.completedVideos)
+        // console.log('module progress completed tests are:',  moduleProgress.completedTest)
+
 
         const total = moduleProgress.totalVideos + moduleProgress.totalTests;
         const completed = moduleProgress.completedVideos + moduleProgress.completedTest;
@@ -446,6 +459,8 @@ const testSubmit = expressAsyncHandler(async (req, res) => {
         moduleProgress.totalVideos === moduleProgress.completedVideos &&
         moduleProgress.totalTests === moduleProgress.completedTest
       );
+
+      // console.log('is module completed: ', isModuleCompleted)
 
       if (isModuleCompleted) {
         moduleProgress.status = 'completed'
@@ -582,7 +597,7 @@ const getCourseProgress = expressAsyncHandler(async (req, res) => {
 const updateVideoCompletion = expressAsyncHandler(async (req, res) => {
   const { courseId, videoId, moduleId } = req.body;
   const userId = req.user._id;
-  console.log("update video completion api called")
+  // console.log("update video completion api called")
   try {
     const videoProgress = await VideoProgress.findOne({ userId, courseId, moduleId, videoId });
 
@@ -611,14 +626,24 @@ const updateVideoCompletion = expressAsyncHandler(async (req, res) => {
     }
 
     const wasCompleted = videoProgress.status === 'completed';
-    console.log('was completed is: ', videoProgress)
+    // console.log('was completed is: ', videoProgress)
     if (!wasCompleted) {
       videoProgress.status = 'completed';
       videoProgress.lastWatchedTime = videoProgress.videoDuration || videoProgress.lastWatchedTime;
       await videoProgress.save();
-      console.log('checking status after saving', videoProgress.status)
+      // console.log('checking status after saving', videoProgress.status)
+    
 
       const moduleProgress = await ModuleProgress.findOne({ userId, courseId, moduleId });
+
+         if (!moduleProgress) {
+      return res.status(404).json({
+        success: false,
+        message: "Module Progress not found for this user and module"
+      });
+    }
+
+    console.log('the module Progress in update vid 90% is: ', moduleProgress)
 
       if (moduleProgress) {
         moduleProgress.completedVideos += 1;
@@ -808,19 +833,19 @@ const checkVideoOrTestInUserProgressSchema = expressAsyncHandler(async (req, res
 const deleteCourse = expressAsyncHandler(async (req, res) => {
   const { courseId } = req.params;
   const userId = req.user._id.toString();
-  console.log("user id id : ", userId);
+  // console.log("user id id : ", userId);
   if (!mongoose.Types.ObjectId.isValid(courseId)) {
     return res.status(400).json({ success: false, message: "Invalid course ID." });
   }
   try {
     const course = await Course.findById(courseId).populate('modules');
-    console.log("course istructor is : ", course.instructor)
+    // console.log("course istructor is : ", course.instructor)
     if (!course) {
       return res.status(404).json({ success: false, message: "Course not found." });
     }
     const instructorId = course.instructor.toString();
     if (instructorId !== userId) {
-      console.log("this is called ")
+      
       return res.status(403).json({ success: false, message: "You are not authorized to delete this course." });
     }
 
@@ -1035,7 +1060,7 @@ const generateSASToken = expressAsyncHandler(async (req, res) => {
     const blobName = req.query.blobName; // get from query
     if (!blobName) return res.status(400).json({ success: false, message: 'blobName is required' });
 
-    console.log("Generating SAS token for blob:", blobName);
+    // console.log("Generating SAS token for blob:", blobName);
 
     const hours = parseInt(req.query.hours) || 1;
     const expiresInMinutes = hours * 60;
@@ -1057,12 +1082,12 @@ const updateLastWatched = expressAsyncHandler(async (req, res) => {
 
   const userId = req.user._id;
 
-  console.log('user id is:', userId);
-  console.log('course id is:', courseId);
-  console.log('module id is:', moduleId);
-  console.log('video id is:', videoId);
-  console.log('lastWatched is:', currentTime);
-  console.log('lastVideoIndex is:', currentVideoIndex);
+  // console.log('user id is:', userId);
+  // console.log('course id is:', courseId);
+  // console.log('module id is:', moduleId);
+  // console.log('video id is:', videoId);
+  // console.log('lastWatched is:', currentTime);
+  // console.log('lastVideoIndex is:', currentVideoIndex);
 
   if (!courseId || !moduleId || currentTime === undefined || currentVideoIndex === undefined || !videoId) {
     return res.status(400).json({
@@ -1088,7 +1113,7 @@ const updateLastWatched = expressAsyncHandler(async (req, res) => {
       });
     }
 
-    console.log('module progrss before update: ', moduleProgress)
+    // console.log('module progrss before update: ', moduleProgress)
 
     videoProgress.lastWatchedTime = currentTime;
     await videoProgress.save();
@@ -1096,7 +1121,7 @@ const updateLastWatched = expressAsyncHandler(async (req, res) => {
     moduleProgress.videoIndex = currentVideoIndex;
     await moduleProgress.save();
 
-    console.log('module progrss after update: ', moduleProgress)
+    // console.log('module progrss after update: ', moduleProgress)
 
 
     const videoProgressList = await VideoProgress.find({ userId, courseId, moduleId });
@@ -1302,8 +1327,8 @@ const submitAssessment = async (req, res) => {
       });
     }
 
-    console.log('== the progress is ==')
-    console.log('the progress as of now mid assessment is:', progress)
+    // console.log('== the progress is ==')
+    // console.log('the progress as of now mid assessment is:', progress)
     const codingQuestions = progress.questions.filter(q => q.type === 'coding');
 
 
@@ -1344,7 +1369,7 @@ const submitAssessment = async (req, res) => {
 
     // now we get an array of updated questions 
 
-    console.log('the updated array of objects is updatedQuestions: ', updatedQuestions)
+    // console.log('the updated array of objects is updatedQuestions: ', updatedQuestions)
 
     const updatedQuestionsWithCodingAndMcqAnswer = [
       ...updatedQuestions,
@@ -1416,6 +1441,59 @@ const isPassed = score >= 75; // pass/fail on combined weighted score
   }
 };
 
+const moduleProgressChecker = async (req, res) => {
+  try {
+    const {  courseId, moduleId } = req.body;
+    const userId = req.user._id;
+
+    // console.log('module id is: ', moduleId)
+    // console.log('course id is: ', courseId)
+    // console.log('user id is: ', userId)
+
+
+    // 1. Find module progress
+    const moduleProgress = await ModuleProgress.findOne({ userId, courseId, moduleId });
+    if (!moduleProgress) {
+      return res.status(404).json({
+        success: false,
+        message: "Module Progress not found for this user and module"
+      });
+    }
+
+    // 2. Get all video progress
+    const allVideoProgress = await VideoProgress.find({ userId, courseId, moduleId });
+
+    // 3. Count completed videos
+    
+    const completedCount = allVideoProgress.filter(v => v.status === "completed").length;
+
+    // 4. Check if mismatch
+    if (completedCount !== moduleProgress.completedVideos) {
+      const percentage = (completedCount / moduleProgress.totalVideos) * 100;
+
+      // Update the module progress
+      moduleProgress.completedVideos = completedCount;
+      moduleProgress.percentageCompleted = percentage;
+      moduleProgress.status = completedCount === moduleProgress.totalVideos ? "completed" : "in-progress";
+
+      await moduleProgress.save();
+    }
+
+    // 5. Return updated module progress
+    return res.status(200).json({
+      success: true,
+      moduleProgress
+    });
+
+  } catch (err) {
+    console.error("Error in moduleProgressChecker:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};
+
 
 module.exports = {
   createCourse,
@@ -1443,6 +1521,6 @@ module.exports = {
   getAllAssessments,
   startAssessment,
   submitAssessment,
-  getAttemptedAssessment
-
+  getAttemptedAssessment,
+  moduleProgressChecker
 };

@@ -15,8 +15,6 @@ const CourseProgress = require('../models/courseProgressSchemas/courseProgress')
 const getCoursesByUserId = expressAsyncHandler(async (req, res) => {
   const { userId } = req.params;
 
-  console.log("this is the user from getCoursesByUserId:", userId);
-
   if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
     return res.status(400).json({
       success: false,
@@ -166,12 +164,9 @@ const enrollCourse = expressAsyncHandler(async (req, res) => {
   }
 });
 
-
-
-
 const moduleProgress = expressAsyncHandler(async (req, res) => {
   const { courseId, moduleId, moduleData } = req.body;
-  console.log(" this is the  module data : ",moduleData );
+  // console.log(" this is the  module data : ",moduleData );
   const userId = req.user._id;
 
   try {
@@ -263,7 +258,7 @@ const getCourseWithProgress = expressAsyncHandler(async (req, res) => {
 const videoProgress = expressAsyncHandler(async (req, res) => {
   const { courseId, videoId, moduleId, videoData } = req.body;
   const userId = req.user._id;
-  console.log("This is the  data form  videoProgres: ",courseId._id,videoId , moduleId );
+  // console.log("This is the  data form  videoProgres: ",courseId._id,videoId , moduleId );
   try {
     let existingProgress = await VideoProgress.findOne({ userId, courseId, moduleId, videoId });
 
@@ -285,7 +280,7 @@ const videoProgress = expressAsyncHandler(async (req, res) => {
     const moduleProgress = await ModuleProgress.find({ userId, courseId });
     const videoProgress = await VideoProgress.find({ userId, courseId });
     const testProgress = await TestProgress.find({ userId, courseId });
-     console.log("this is  the  video data : video progress data ",courseProgress )
+    //  console.log("this is  the  video data : video progress data ",courseProgress )
     return res.status(200).json({
       success: true,
       message: 'Video progress handled successfully',
@@ -308,9 +303,9 @@ const testProgress = expressAsyncHandler(async (req, res) => {
 
   try {
     let existingProgress = await TestProgress.findOne({ userId, courseId, moduleId, testId });
-  console.log("this is the  existing  test progress : " , existingProgress)
+  // console.log("this is the  existing  test progress : " , existingProgress)
     if (!existingProgress) {
-      console.log('we are in if block')
+      
       existingProgress = new TestProgress({
         userId,
         courseId,
@@ -350,8 +345,6 @@ const testProgress = expressAsyncHandler(async (req, res) => {
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
-
-
 
 module.exports = {
   getCoursesByUserId,
