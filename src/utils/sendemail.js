@@ -26,7 +26,7 @@ async function sendEmail(recipientEmail, descriptionHtml) {
       return;
     }
 
-    console.log("✅ Access token acquired.");
+    // console.log("✅ Access token acquired.");
 
     const getNameFromEmail = (email) => {
       const name = email.split("@")[0];

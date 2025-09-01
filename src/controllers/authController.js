@@ -20,7 +20,7 @@ const generateToken = (id) => {
 
 const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password, userType: role, employeeId } = req.body;
-  console.log('Registering user:', { name, email, role });
+  //console.log('Registering user:', { name, email, role });
   if (!email.endsWith('@ielektron.com')) {
     return res.status(403).json({
       success: false,
@@ -51,7 +51,7 @@ const  lowerEmail = email.toLowerCase();
         token: generateToken(user._id),
       }
     });
-    console.log('User registered successfully:', user);
+    //console.log('User registered successfully:', user);
   } else {
     res.status(400).json({ success: false, message: 'Invalid user data' });
   }
@@ -97,9 +97,9 @@ const generateOtpHandler = expressAsyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: "Email is required." });
   }
   
-  console.log("email is sjakbvsjkdv", email)
+  //console.log("email is sjakbvsjkdv", email)
   if (!email.endsWith('@ielektron.com')) {
-    console.log("endsWith wjnanvadn")
+    //console.log("endsWith wjnanvadn")
     return res.status(403).json({
       success: false,
       message: 'This email ID is not allowed. Please use your organization email ID.'
@@ -130,7 +130,7 @@ const generateOtpHandler = expressAsyncHandler(async (req, res) => {
 
     res.status(200).json({ success: true, message: "OTP sent to email." });
   } catch (error) {
-    console.error("OTP Generation Error:", error);
+    //console.error("OTP Generation Error:", error);
     res.status(500).json({ success: false, message: "Failed to generate and send OTP." });
   }
 });
@@ -161,7 +161,7 @@ const verifyOtpHandler = expressAsyncHandler(async (req, res) => {
     await Otp.deleteOne({ email });
     res.status(200).json({ success: true, message: "OTP verified successfully." });
   } catch (error) {
-    console.error("OTP Verification Error:", error);
+    //console.error("OTP Verification Error:", error);
     res.status(500).json({ success: false, message: "Failed to verify OTP." });
   }
 });
@@ -192,8 +192,8 @@ const getEnrolledEmployees = expressAsyncHandler(async (req, res) => {
         courseId: course._id,
       }).populate("userId");
 
-      console.log('courseis: ', course);
-      console.log('progress record is: ', progressRecords);
+      //console.log('courseis: ', course);
+      //console.log('progress record is: ', progressRecords);
 
       if (progressRecords.length > 0) {
         progressRecords.forEach((record) => {
@@ -208,7 +208,7 @@ const getEnrolledEmployees = expressAsyncHandler(async (req, res) => {
       }
     }
 
-    console.log('students are is: ', showAllStudentData);
+    //console.log('students are is: ', showAllStudentData);
 
     return res.status(200).json({
       success: true,
@@ -220,16 +220,16 @@ const getEnrolledEmployees = expressAsyncHandler(async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error fetching enrolled employees:", error);
+    //console.error("Error fetching enrolled employees:", error);
     return res.status(500).json({ success: false, message: "Server Error" });
   }
 });
 
 const resetPassword = expressAsyncHandler(async (req, res) => {
-  console.log('req. body is for reset password:', req.password);
+  //console.log('req. body is for reset password:', req.password);
 
   const { email, password } = req.body;
-  console.log('resetting password:', { email, password });
+  //console.log('resetting password:', { email, password });
 
   try {
     if (!email || !password) {
@@ -243,7 +243,7 @@ const resetPassword = expressAsyncHandler(async (req, res) => {
     await user.save();
     return res.status(200).json({ success: true, message: "Password changed successfully" });
   } catch (error) {
-    console.error("Error resetting password:", error);
+    //console.error("Error resetting password:", error);
     return res.status(500).json({ success: false, message: "Server Error" });
   }
 });

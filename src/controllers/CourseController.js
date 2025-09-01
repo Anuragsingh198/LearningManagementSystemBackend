@@ -643,7 +643,7 @@ const updateVideoCompletion = expressAsyncHandler(async (req, res) => {
       });
     }
 
-    console.log('the module Progress in update vid 90% is: ', moduleProgress)
+    // console.log('the module Progress in update vid 90% is: ', moduleProgress)
 
       if (moduleProgress) {
         moduleProgress.completedVideos += 1;

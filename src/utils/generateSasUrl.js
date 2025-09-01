@@ -11,7 +11,7 @@ const AZURE_STORAGE_ACCOUNT_KEY = process.env.AZURE_STORAGE_ACCOUNT_KEY;
 const AZURE_CONTAINER_NAME = process.env.AZURE_CONTAINER_NAME;
 
 const generateSasUrl = ({ blobName, expiresInMinutes = 60 }) => {
-    console.log("Generating SAS URL for blob:", blobName);
+    // console.log("Generating SAS URL for blob:", blobName);
   const credential = new StorageSharedKeyCredential(
     AZURE_STORAGE_ACCOUNT_NAME,
     AZURE_STORAGE_ACCOUNT_KEY

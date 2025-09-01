@@ -5,7 +5,7 @@ const judge0ServerUrl = process.env.JUDGE0_URL
 const CodingQuestion = require('../models/asssementSchemas/codingQuestionSchema');
 const Assessment = require("../models/CourseSchemas/mainAssessmentModal");
 const AssessmentProgress = require("../models/courseProgressSchemas/assessmentProgress");
-console.log('this is judge)url : ', judge0ServerUrl);
+//console.log('this is judge)url : ', judge0ServerUrl);
 const getAllLanguages = async (req, res) => {
   try {
     const { data } = await axios.get(`${judge0ServerUrl}/languages`, {
@@ -29,14 +29,14 @@ const getAllLanguages = async (req, res) => {
     const filteredLanguages = data.filter(lang =>
       allowedLanguages.includes(lang.name)
     );
-    // console.log("Filtered Languages:", filteredLanguages);
+    // //console.log("Filtered Languages:", filteredLanguages);
 
     res.status(200).json({
       success: true,
       languages: filteredLanguages
     });
   } catch (error) {
-    console.error("Error fetching languages:", error?.message || error);
+    //console.error("Error fetching languages:", error?.message || error);
     res.status(500).json({
       success: false,
       message: error?.message || "Something went wrong while fetching languages"
@@ -47,9 +47,9 @@ const getAllLanguages = async (req, res) => {
 const getQuestionById = async (req, res) => {
   try {
     const { questionId } = req.params;
-    // console.log("this is the  question id : ", questionId)
+    // //console.log("this is the  question id : ", questionId)
     const allQuestions = await CodingQuestion.find();
-    // console.log(' this is  all the  questions : ', allQuestions);
+    // //console.log(' this is  all the  questions : ', allQuestions);
     const question = await CodingQuestion.findById(questionId).populate('run_code_testcases');
 
     if (!question) {
@@ -71,7 +71,7 @@ const getQuestionById = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error fetching question:", error?.message || error);
+    //console.error("Error fetching question:", error?.message || error);
     res.status(500).json({
       success: false,
       message: error?.message || "Something went wrong while fetching question",
@@ -84,10 +84,10 @@ const runCode = async (req, res) => {
   try {
     const { source_code, language_id, test_cases } = req.body;
 
-    console.log("=== Incoming Request Body ===");
-    console.log("source_code:", source_code);
-    console.log("language_id:", language_id);
-    console.log("test_cases:", test_cases);
+    //console.log("=== Incoming Request Body ===");
+    //console.log("source_code:", source_code);
+    //console.log("language_id:", language_id);
+    //console.log("test_cases:", test_cases);
 
     if (!source_code || !language_id || !test_cases) {
       return res.status(400).json({ success: false, message: "Missing required fields" });
@@ -102,8 +102,8 @@ const runCode = async (req, res) => {
       }))
     };
 
-    console.log("=== Submissions Payload to Judge0 ===");
-    console.log(JSON.stringify(submissionsPayload, null, 2));
+    //console.log("=== Submissions Payload to Judge0 ===");
+    //console.log(JSON.stringify(submissionsPayload, null, 2));
 
     const { data: batchResponse } = await axios.post(
       `${judge0ServerUrl}/submissions/batch?base64_encoded=true`,
@@ -111,8 +111,8 @@ const runCode = async (req, res) => {
       { headers: { "Content-Type": "application/json" } }
     );
 
-    console.log("=== Raw Batch Response from Judge0 ===");
-    console.log(JSON.stringify(batchResponse, null, 2));
+    //console.log("=== Raw Batch Response from Judge0 ===");
+    //console.log(JSON.stringify(batchResponse, null, 2));
 
     let tokens;
     if (Array.isArray(batchResponse)) {
@@ -120,27 +120,27 @@ const runCode = async (req, res) => {
     } else if (batchResponse.submissions) {
       tokens = batchResponse.submissions.map(s => s.token);
     } else {
-      console.error("Unexpected Judge0 batch response format");
+      //console.error("Unexpected Judge0 batch response format");
       return res.status(500).json({
         success: false,
         message: "Invalid response from Judge0"
       });
     }
 
-    console.log("=== Tokens Retrieved ===");
-    console.log(tokens);
+    //console.log("=== Tokens Retrieved ===");
+    //console.log(tokens);
 
     let results;
     while (true) {
       const { data } = await axios.get(
         `${judge0ServerUrl}/submissions/batch?tokens=${tokens.join(",")}&base64_encoded=true`
       );
-      console.log("=== Polling Results from Judge0 ===");
-      console.log(JSON.stringify(data, null, 2));
+      //console.log("=== Polling Results from Judge0 ===");
+      //console.log(JSON.stringify(data, null, 2));
 
       results = data.submissions || data;
-      console.log('=== Results from Judge0 ===')
-      console.log(results)
+      //console.log('=== Results from Judge0 ===')
+      //console.log(results)
 
       if (results.every(r => r.status?.id >= 3)) break;
       await new Promise(r => setTimeout(r, 500));
@@ -159,16 +159,16 @@ const runCode = async (req, res) => {
       status: r.status?.description
     }));
 
-    console.log("=== Final Decoded Results ===");
-    console.log(finalResults);
+    //console.log("=== Final Decoded Results ===");
+    //console.log(finalResults);
 
     res.status(200).json({
       success: true,
       results: finalResults
     });
   } catch (error) {
-    console.error("=== Error running code ===");
-    console.error(error?.response?.data || error?.message || error);
+    //console.error("=== Error running code ===");
+    //console.error(error?.response?.data || error?.message || error);
     res.status(500).json({
       success: false,
       message: error?.message || "Something went wrong while running code"
@@ -204,8 +204,8 @@ const submitCode = async (req, res) => {
       return res.status(404).json({ success: false, message: "Question or test cases not found" });
     }
 
-    console.log("=== coding question for submit is ===")
-    console.log("coding question is: ", question)
+    //console.log("=== coding question for submit is ===")
+    //console.log("coding question is: ", question)
 
 
     // Prepare Judge0 batch payload (Base64 encoded)
@@ -232,7 +232,7 @@ const submitCode = async (req, res) => {
     } else if (batchResponse.submissions) {
       tokens = batchResponse.submissions.map(s => s.token);
     } else {
-      console.error("Unexpected Judge0 batch response:", batchResponse);
+      //console.error("Unexpected Judge0 batch response:", batchResponse);
       return res.status(500).json({ success: false, message: "Invalid response from Judge0" });
     }
 
@@ -276,10 +276,10 @@ const submitCode = async (req, res) => {
     const total = safeResults.length;
     const passed = safeResults.filter(r => r.status?.id === 3).length;
 
-    console.log('=== total and passed test cases ===')
-    console.log('safe results:', safeResults)
-    console.log('total test cases:', total)
-    console.log('total test cases passed:', passed)
+    //console.log('=== total and passed test cases ===')
+    //console.log('safe results:', safeResults)
+    //console.log('total test cases:', total)
+    //console.log('total test cases passed:', passed)
 
 
     let progress = await AssessmentProgress.findOne({
@@ -287,7 +287,7 @@ const submitCode = async (req, res) => {
       assessment: assessmentId
     });
 
-    console.log('the progress fetched from assessment progress is:', progress)
+    //console.log('the progress fetched from assessment progress is:', progress)
 
     if (!progress) {
       return res.status(404).json({
@@ -300,7 +300,7 @@ const submitCode = async (req, res) => {
       q => q._id.toString() === questionId.toString()
     );
 
-    console.log('existing index is: ', existingIndex)
+    //console.log('existing index is: ', existingIndex)
 
     if (existingIndex === -1) {
   return res.status(404).json({
@@ -318,7 +318,7 @@ const submitCode = async (req, res) => {
 
     await progress.save();
 
-    console.log('progress after all the operations is: ', progress)
+    //console.log('progress after all the operations is: ', progress)
 
 
     return res.status(200).json({
@@ -329,7 +329,7 @@ const submitCode = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Submit Code Error:", error?.response?.data || error.message);
+    //console.error("Submit Code Error:", error?.response?.data || error.message);
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
@@ -388,7 +388,7 @@ const addAssessment = async (req, res) => {
 
       await newAssessment.save();
 
-      // console.log('the new assessment stored in mongodb is: ', newAssessment)
+      // //console.log('the new assessment stored in mongodb is: ', newAssessment)
 
     }
 
@@ -407,7 +407,7 @@ const addAssessment = async (req, res) => {
 
       await newAssessment.save();
 
-      // console.log('the new assessment stored in mongodb is: ', newAssessment)
+      // //console.log('the new assessment stored in mongodb is: ', newAssessment)
 
     }
 
@@ -419,7 +419,7 @@ const addAssessment = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error in addAssessment:", error.message);
+    //console.error("Error in addAssessment:", error.message);
     return res.status(500).json({
       success: false,
       message: "Failed to add assessment",
