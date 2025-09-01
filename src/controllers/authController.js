@@ -31,10 +31,10 @@ const registerUser = asyncHandler(async (req, res) => {
   if (userExists) {
     return res.status(400).json({ success: false, message: 'User already exists' });
   }
-const  lowerEmail = email.toLowerCase();
+  const lowerEmail = email.toLowerCase();
   const user = await User.create({
     name,
-    email:lowerEmail,
+    email: lowerEmail,
     password,
     role,
     employeeId
@@ -67,7 +67,7 @@ const loginUser = asyncHandler(async (req, res) => {
       message: 'This email ID is not allowed. Please use your organization email ID.'
     });
   }
- const  lowerEmail = email.toLowerCase();
+  const lowerEmail = email.toLowerCase();
   const user = await User.findOne({ email: lowerEmail });
   if (user && (await user.matchPassword(password))) {
     res.json({
@@ -91,12 +91,12 @@ const loginUser = asyncHandler(async (req, res) => {
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 const generateOtpHandler = expressAsyncHandler(async (req, res) => {
-  const { email , type } = req.body;
+  const { email, type } = req.body;
 
   if (!email) {
     return res.status(400).json({ success: false, message: "Email is required." });
   }
-  
+
   //console.log("email is sjakbvsjkdv", email)
   if (!email.endsWith('@ielektron.com')) {
     //console.log("endsWith wjnanvadn")
@@ -106,7 +106,7 @@ const generateOtpHandler = expressAsyncHandler(async (req, res) => {
     });
   }
   const newEmail = email.toLowerCase();
-  if(type === 'signup'){
+  if (type === 'signup') {
     const userExists = await User.findOne({ email: newEmail });
     if (userExists) {
       return res.status(400).json({ success: false, message: 'User already exists' });
@@ -176,51 +176,47 @@ const getEnrolledEmployees = expressAsyncHandler(async (req, res) => {
       return res.status(401).json({ success: false, message: "User not authenticated" });
     }
 
-    const course = await Course.findById(courseId).populate('students');
-    
+    // 1. Fetch course & enrolled students (single query)
+    const course = await Course.findById(courseId).populate("students", "_id").lean();
+
     if (!course || course.students.length === 0) {
       return res.status(404).json({ success: false, message: "No students found in this course" });
     }
 
-    const showAllStudentData = [];
-    const studentCount = course.students.length;
-    const title = course.title;
+    const studentIds = course.students.map(s => s._id);
 
-    for (const student of course.students) {
-      const progressRecords = await CourseProgress.find({
-        userId: student._id,
-        courseId: course._id,
-      }).populate("userId");
+    // 2. Fetch all progress records in one query (batch query)
+    const progressRecords = await CourseProgress.find(
+      { courseId: course._id, userId: { $in: studentIds } },
+      "status isCourseCompleted remainingDays enrolledDate totalModules completedModules completionDate overallPercentage userId"
+    )
+      .populate("userId", "name employeeId")
+      .lean();
 
-      //console.log('courseis: ', course);
-      //console.log('progress record is: ', progressRecords);
-
-      if (progressRecords.length > 0) {
-        progressRecords.forEach((record) => {
-          if (record.userId) {
-            showAllStudentData.push({
-              status: record.status,
-              name: record.userId.name,
-              empId: record.userId.employeeId || "EMP001",
-            });
-          }
-        });
-      }
-    }
-
-    //console.log('students are is: ', showAllStudentData);
+    // 3. Format the result
+    const showAllStudentData = progressRecords.map(record => ({
+      status: record.status,
+      isCompleted: record.isCourseCompleted,
+      remainingDays: record.remainingDays,
+      enrolledDate: record.enrolledDate,
+      totalModules: record.totalModules,
+      completedModules: record.completedModules,
+      completionDate: record.completionDate,
+      overallPercentage: record.overallPercentage,
+      name: record.userId?.name,
+      empId: record.userId?.employeeId || "EMP001",
+    }));
 
     return res.status(200).json({
       success: true,
       enrollStudents: {
-        title,
-        studentCount,
+        title: course.title,
+        studentCount: course.students.length,
         students: showAllStudentData,
       },
     });
 
   } catch (error) {
-    //console.error("Error fetching enrolled employees:", error);
     return res.status(500).json({ success: false, message: "Server Error" });
   }
 });
