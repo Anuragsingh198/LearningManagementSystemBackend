@@ -1,296 +1,343 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DigiVidya Certificate</title>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DigiVidya Certificate</title>
 
-    <link
-      href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Roboto:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 
-    <style>
-      body {
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Roboto', sans-serif;
+      background: #e6f0ff;
+    }
+
+    .certificate {
+      width: 297mm;   /* A4 landscape width */
+      height: 210mm;  /* A4 landscape height */
+      margin: 0 auto;
+      background: white;
+      border-radius: 4px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      position: relative;
+      padding: 30px 60px;
+      overflow: hidden;
+      background-color: #ffffff;
+      background-image:
+        repeating-linear-gradient(45deg, #f5f7fa 0px, #f5f7fa 2px, transparent 2px, transparent 10px),
+        repeating-linear-gradient(-45deg, #f5f7fa 0px, #f5f7fa 2px, transparent 2px, transparent 10px);
+      background-size: 40px 40px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+
+    /* Watermark layer */
+    .watermark {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-content: center;
+      z-index: 0;
+      pointer-events: none;
+      transform: rotate(-30deg);
+      opacity: 0.1;
+    }
+    .watermark span {
+      font-size: 40px;
+      font-weight: bold;
+      color: #696161;
+      margin: 50px;
+      white-space: nowrap;
+    }
+
+    .bg-shape {
+      display: none;
+    }
+
+    .right-banner {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 200px;
+      height: 90%;
+      background-color: #cce0ff;
+      text-align: center;
+      border-right: 1px solid #ccc;
+      border-radius: 0 4px 4px 0; 
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 85%, 0 100%);
+      z-index: 2;
+    }
+
+    .right-banner h3 {
+      font-size: 16px;
+      margin: 0;
+      color: #151B54;
+      margin-bottom: 15px;
+      font-family: 'Lato', sans-serif;
+      font-weight: 700;
+    }
+
+    .left-content {
+      width: 70%;
+      float: left;
+      position: relative;
+      z-index: 2;
+    }
+
+    .left-content h1 {
+      font-family: 'Lato', sans-serif;
+      font-size: 42px;
+      font-weight: 700;
+      color: #111;
+      margin: 0 0 30px 0;
+    }
+
+    .info-bar {
+      font-size: 16px;
+      color: #666;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 30px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .certificate-subtitle {
+      font-size: 20px;
+      color: #444;
+      font-weight: 500;
+      margin-bottom: 20px;
+    }
+
+    .certificate-name {
+      font-size: 34px;
+      font-style: italic;
+      font-weight: bold;
+      margin: 10px 0;
+      color: #333;
+      text-decoration: underline;
+      font-family: 'Lato', sans-serif;
+    }
+
+    .certificate-text {
+      font-size: 18px;
+      color: #555;
+      margin-bottom: 14px;
+    }
+
+    .additional-text {
+      font-size: 16px;
+      color: #777;
+      margin-bottom: 30px;
+    }
+
+    .badge img {
+      width: 120px;
+    }
+
+    .date {
+      font-size: 16px;
+      margin-top: 30px;
+      color: #111;
+    }
+
+    .qr {
+      position: absolute;
+      bottom: 20px;
+      left: 60px;
+      text-align: center;
+      font-size: 12px;
+      color: #333;
+      z-index: 2;
+    }
+
+    .qr img {
+      width: 70px;
+      height: 70px;
+      margin-bottom: 6px;
+    }
+
+    .signature-name {
+      font-family: 'Lato', serif;
+      font-size: 20px;
+      font-style: italic;
+      margin-bottom: 5px;
+    }
+
+    .signature-role {
+      font-size: 14px;
+      color: #555;
+    }
+
+    .sign-block {
+      position: absolute;
+      bottom: 65px;
+      font-size: 14px;
+      text-align: center;
+      z-index: 2;
+    }
+
+    .sign-left {
+      left: 60px;
+    }
+
+    .sign-right {
+      right: 250px;
+    }
+
+    .logo {
+      position: absolute;
+      top: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+    }
+
+    .logo img {
+      width: 100px;
+    }
+
+    .disclaimer {
+      position: absolute;
+      bottom: 10px;
+      width: 100%;
+      text-align: center;
+      font-size: 14px;
+      color: #113F67;
+      font-style: italic;
+      z-index: 2;
+    }
+
+    .download-button {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 14px;
+      z-index: 1000;
+    }
+
+    .download-button:hover {
+      background-color: #0056b3;
+    }
+
+    @media print {
+      @page {
+        size: A4 landscape;
         margin: 0;
-        padding: 0;
-        font-family: 'Roboto', sans-serif;
-        background: #e6f0ff;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
+      }
+
+      .download-button,
+      .watermark {
+        display: none !important;
+      }
+
+      body {
+        background: white !important;
       }
 
       .certificate {
-        width: 1200px;
-        height: 700px;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 0 20px rgba(0,0,0,0.1);
-        position: relative;
-        padding: 60px;
-        overflow: hidden;
-        background-color: #ffffff;
-        background-image:
-          repeating-linear-gradient(45deg, #f5f7fa 0px, #f5f7fa 2px, transparent 2px, transparent 10px),
-          repeating-linear-gradient(-45deg, #f5f7fa 0px, #f5f7fa 2px, transparent 2px, transparent 10px);
-        background-size: 40px 40px;
-        border: 1px solid rgba(0, 0, 0, 0.1);
+        box-shadow: none !important;
+        margin: 0 auto !important;
+      }
+
+      * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
         color-adjust: exact !important;
       }
+    }
+  </style>
+</head>
+<body>
 
-      .top-bar {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 30px;
-      }
+<a href="#" class="download-button" onclick="window.print()">Download Certificate</a>
 
-      .employee-id {
-        text-align: left;
-        font-size: 16px;
-        color: #666;
-        flex: 1;
-      }
+<div class="certificate">
+  <!-- Watermark -->
+<div class="watermark">
+  <span>© DigiVidya</span>
+  <span>© DigiVidya</span><span>© DigiVidya</span>
+  <span>© DigiVidya</span><span>© DigiVidya</span><span>© DigiVidya</span>
+  <span>© DigiVidya</span><span>© DigiVidya</span><span>© DigiVidya</span><span>© DigiVidya</span>
+  <span>© DigiVidya</span><span>© DigiVidya</span><span>© DigiVidya</span><span>© DigiVidya</span>
+  <span>© DigiVidya</span><span>© DigiVidya</span><span>© DigiVidya</span><span>© DigiVidya</span><span>© DigiVidya</span>
+  <span>© DigiVidya</span><span>© DigiVidya</span><span>© DigiVidya</span><span>© DigiVidya</span><span>© DigiVidya</span>
+  <span>© DigiVidya</span><span>© DigiVidya</span><span>© DigiVidya</span><span>© DigiVidya</span>
+  <span>© DigiVidya</span><span>© DigiVidya</span><span>© DigiVidya</span><span>© DigiVidya</span>
+  <span>© DigiVidya</span><span>© DigiVidya</span><span>© DigiVidya</span>
+  <span>© DigiVidya</span><span>© DigiVidya</span>
+  <span>© DigiVidya</span>
+</div>
 
-      .logo {
-        text-align: center;
-        flex: 1;
-      }
 
-      .logo img {
-        width: 100px;
-      }
-
-      .certificate-id {
-        text-align: right;
-        font-size: 16px;
-        color: #666;
-        flex: 1;
-      }
-
-      .certificate-content {
-        text-align: center;
-        margin: 0 auto;
-        max-width: 800px;
-      }
-
-      h1 {
-        font-size: 36px;
-        margin: 0 0 30px 0;
-        color: #333;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-      }
-
-      .certificate-subtitle {
-        font-size: 20px;
-        color: #444;
-        font-weight: 500;
-        margin-bottom: 20px;
-      }
-
-      .certificate-name {
-        font-size: 34px;
-        font-style: italic;
-        font-weight: bold;
-        margin: 10px 0 30px 0;
-        color: #333;
-        text-decoration: underline;
-        font-family: 'Lato', sans-serif;
-      }
-
-      .certificate-text {
-        font-size: 18px;
-        color: #555;
-        margin-bottom: 14px;
-      }
-
-      .additional-text {
-        font-size: 16px;
-        color: #777;
-        margin-bottom: 30px;
-        line-height: 1.5;
-      }
-
-      .badge {
-        margin: 20px 0;
-      }
-
-      .badge img {
-        width: 120px;
-      }
-
-      .date {
-        font-size: 16px;
-        margin: 30px 0;
-        color: #111;
-        font-weight: 500;
-      }
-
-      .signatures {
-        display: flex;
-        justify-content: space-between;
-        margin-top: 50px;
-        position: relative;
-      }
-
-      .signature-left {
-        text-align: left;
-        position: absolute;
-        left: 0;
-        bottom: 0;
-      }
-
-      .signature-right {
-        text-align: right;
-        position: absolute;
-        right: 0;
-        bottom: 0;
-      }
-
-      .signature-name {
-        font-family: 'Lato', serif;
-        font-size: 20px;
-        font-style: italic;
-        margin-bottom: 5px;
-        font-weight: bold;
-      }
-
-      .signature-role {
-        font-size: 14px;
-        color: #555;
-      }
-
-      .disclaimer {
-        position: absolute;
-        bottom: 10px;
-        left: 0;
-        right: 0;
-        text-align: center;
-        font-size: 14px;
-        color: #113F67;
-        font-style: italic;
-      }
-
-      .download-button {
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        padding: 10px 20px;
-        background-color: #007bff;
-        color: white;
-        text-decoration: none;
-        border-radius: 5px;
-        font-size: 14px;
-        z-index: 10;
-      }
-
-      .download-button:hover {
-        background-color: #0056b3;
-      }
-
-      @media print {
-        .download-button {
-          display: none;
-        }
-
-        body {
-          background: white !important;
-          display: block;
-        }
-
-        .certificate {
-          box-shadow: none !important;
-          margin: 0 auto !important;
-        }
-
-        * {
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-          color-adjust: exact !important;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <a href="#" class="download-button" onclick="window.print()"
-      >Download Certificate</a
-    >
-
-    <div class="certificate">
-      <div class="top-bar">
-        <div
-          style="position:absolute;top:40px;left:60px;font-size:16px;color:#666;"
-        >
-          <strong style="display:block;">Employee ID:</strong>
-          EMP-789654
-        </div>
-
-        <div class="logo">
-          <img
-            src="https://www.ielektron.com/assets/img/elektron-logo.png"
-            alt="Logo"
-          />
-        </div>
-        <div
-          style="position:absolute;top:40px;right:60px;font-size:16px;color:#666;text-align:right;"
-        >
-          <strong style="display:block;">Certificate ID:</strong>
-          DV-2024-001
-        </div>
-      </div>
-
-      <div class="certificate-content">
-        <h1>CERTIFICATE OF COMPLETION</h1>
-
-        <div class="certificate-subtitle">
-          This certificate is proudly presented to
-        </div>
-
-        <div class="certificate-name">Adi Jain</div>
-
-        <div class="certificate-text">
-          For successfully completing the
-          <b>"Python"</b> course.
-        </div>
-
-        <div class="additional-text">
-          This certificate acknowledges your outstanding dedication, hard work,
-          and successful completion of the program. Congratulations!
-        </div>
-
-        <div class="badge">
-          <img
-            src="https://i.ibb.co/m56x910f/2a22497e-acc6-4efd-9626-d218c35c1c85-removalai-preview.png"
-            alt="Badge"
-          />
-        </div>
-
-        <div class="date">June 16, 2025</div>
-      </div>
-
-      <div class="signatures">
-        <div class="signature-left">
-          <div class="signature-name">Gopal Adusumilli</div>
-          <div class="signature-role">DigiVidya Coordinator</div>
-        </div>
-
-        <div class="signature-right">
-          <div class="signature-name">Tarun Kumar Runwal</div>
-          <div class="signature-role">VP Engineering</div>
-        </div>
-      </div>
-
-      <div class="disclaimer">
-        *This certificate is digitally signed and does not require a physical
-        signature.
-      </div>
+  <div class="right-banner">
+    <h3 style="font-size:20px">VERIFIED</h3>
+    <div class="seal">
+      <img src="https://i.ibb.co/9HZtsK32/logo2-1.png" alt="Seal" width="140" height="100" />
     </div>
-  </body>
+  </div>
+
+  <div class="logo">
+    <img src="https://www.ielektron.com/assets/img/elektron-logo.png" alt="Logo" />
+  </div>
+
+  <div class="info-bar" style="padding-right: 40px;">
+    <div><strong>Employee ID:</strong> EMP-789654</div>
+    <div style="margin-right: 110px;"><strong>Certificate ID:</strong> DV-2024-001</div>
+  </div>
+
+  <div class="left-content">
+    <h1>CERTIFICATE<br>OF COMPLETION</h1>
+
+    <div class="certificate-subtitle">This certificate is proudly presented to</div>
+    <div class="certificate-name">Adi Jain</div>
+
+    <div class="certificate-text">
+      For successfully completing the <b>"Python"</b> course.
+    </div>
+
+    <div class="additional-text">
+      This certificate acknowledges your outstanding dedication, hard work,
+      and successful completion of the program. Congratulations!
+    </div>
+
+    <div class="badge">
+      <img src="https://i.ibb.co/m56x910f/2a22497e-acc6-4efd-9626-d218c35c1c85-removalai-preview.png" alt="Badge" />
+    </div>
+
+    <div class="date">Awarded on June 16, 2025</div>
+  </div>
+
+  <div class="sign-block sign-left">
+    <div class="signature-name">Gopal Adusumilli</div>
+    <div class="signature-role">DigiVidya Coordinator</div>
+  </div>
+
+  <div class="sign-block sign-right">
+    <div class="signature-name">Tarun Kumar Runwal</div>
+    <div class="signature-role">VP Engineering</div>
+  </div>
+
+  <div class="disclaimer">
+    *This certificate is digitally signed and does not require a physical signature.
+  </div>
+</div>
+
+</body>
 </html>
-
-
