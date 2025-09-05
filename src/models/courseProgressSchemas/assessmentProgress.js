@@ -58,7 +58,65 @@ duration: {
     type: Date,
     required: true
   },
-  score: {
+  MarksScore: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+   TotalMarks: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  TotalMcqQuestions: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  TotalAnsweredMcqQuestions: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+    TotalUnansweredMcqQuestions: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+     TotalIncorrectMcqQuestions: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  MarksForEachMcqQuestion: {
+    type: Number,
+    default: 4,
+  },
+  MarksScoredForMcq: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+    TotalAnsweredCodingQuestions: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+    TotalUnansweredCodingQuestions: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+     TotalIncorrectCodingQuestions: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+   MarksForEachCodingQuestion: {
+    type: Number,
+    default: 10,
+  },
+    MarksScoredForCoding: {
     type: Number,
     default: 0,
     min: 0

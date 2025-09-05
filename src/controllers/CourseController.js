@@ -1318,8 +1318,6 @@ const submitAssessment = async (req, res) => {
       _id: assessmentId
     });
 
-    // console.log('the user id and progress id are: ', userId, assessmentId)
-
     if (!progress) {
       return res.status(404).json({
         success: false,
@@ -1327,102 +1325,154 @@ const submitAssessment = async (req, res) => {
       });
     }
 
-    // console.log('== the progress is ==')
-    // console.log('the progress as of now mid assessment is:', progress)
+    // keep existing coding questions saved in progress
     const codingQuestions = progress.questions.filter(q => q.type === 'coding');
 
-
-
-    const progressAssessmentId = progress.assessment
+    const progressAssessmentId = progress.assessment;
     const assessment = await Assessment.findById(progressAssessmentId).lean();
     if (!assessment) {
       return res.status(404).json({ success: false, message: "Assessment not found" });
     }
 
-    // now the progress has coding questions and answers... i have to retain them and then add the updated questions
-
-
-
-    // Map user's answers for quick lookup
+    // Build answer map for quick lookup (store ids as strings)
     const answersMap = {};
-    allAnswers.forEach(ans => {
-      answersMap[ans.question_id] = ans.option_id;
+    (allAnswers || []).forEach(ans => {
+      // ans.question_id and ans.option_id expected
+      if (ans && ans.question_id) answersMap[ans.question_id.toString()] = (ans.option_id || "").toString();
     });
 
+    // MCQ counters
     let correctCount = 0;
-    const updatedQuestions = assessment.questions.map(q => {
-      const userOptionId = answersMap[q._id.toString()];
-      const userOption = q.options.find(opt => opt._id.toString() === userOptionId);
+    let totalMcqQuestions = (assessment.questions || []).length;
+    let totalAnsweredMcqQuestions = 0;
+    let totalUnansweredMcqQuestions = 0;
+    let totalIncorrectMcqQuestions = 0;
 
-      const isCorrect = userOption && userOption.optionText === q.correctAnswer;
-      if (isCorrect) correctCount++;
+    // Build updated MCQ question entries
+    const updatedMcqQuestions = (assessment.questions || []).map(q => {
+      const qIdStr = q._id.toString();
+      const userOptionId = answersMap[qIdStr]; // may be undefined or ""
+      // find option only if id present
+      const userOption = userOptionId ? q.options.find(opt => opt._id.toString() === userOptionId) : undefined;
+      const userAnswerText = userOption ? (userOption.optionText ?? null) : null;
+
+      // Determine unanswered: no option selected or selected option has empty/null text
+      if (!userOption || userAnswerText === null || userAnswerText === "") {
+        totalUnansweredMcqQuestions++;
+      } else {
+        totalAnsweredMcqQuestions++;
+      }
+
+      // Determine correctness
+      const isCorrect = (userAnswerText !== null && userAnswerText !== "") && (userAnswerText === q.correctAnswer);
+      if (isCorrect) {
+        correctCount++;
+      } else {
+        // If user actually answered but it's not correct -> incorrect
+        if (userOption && (userAnswerText !== null && userAnswerText !== "")) {
+          totalIncorrectMcqQuestions++;
+        }
+      }
 
       return {
         questionId: q._id,
         type: 'mcq',
         questionText: q.questionText,
-        yourAnswer: userOption ? userOption.optionText : null,
+        yourAnswer: userAnswerText,           // null if not answered
         correctAnswer: q.correctAnswer,
         isCorrect
       };
     });
 
-    // now we get an array of updated questions 
-
-    // console.log('the updated array of objects is updatedQuestions: ', updatedQuestions)
-
+    // Combine updated mcq questions with previously stored coding questions (retain progress)
     const updatedQuestionsWithCodingAndMcqAnswer = [
-      ...updatedQuestions,
+      ...updatedMcqQuestions,
       ...codingQuestions
     ];
 
-    const totalMcqQuestions = assessment.questions.length;
+    // MCQ scores
+    const mcqMarksPerQ = 4;
+    const mcqMarks = correctCount * mcqMarksPerQ;
+    const mcqMax = totalMcqQuestions * mcqMarksPerQ;
 
-    const mcqMarks = correctCount;           // 1 mark per correct MCQ
-    const mcqMax = totalMcqQuestions * 1;
-
+    // Coding counters and scoring
     let codingMarks = 0;
-
     const codingCount = codingQuestions.length;
-const codingMax = codingCount * 5;
+    const codingMarksPerQ = 10;
+    const codingMax = codingCount * codingMarksPerQ;
 
-for (const cq of codingQuestions) {
-  const total = Number(cq.total_test_cases) || 0;
-  const passed = Number(cq.total_test_cases_passed) || 0;
+    let totalAnsweredCodingQuestions = 0;
+    let totalUnansweredCodingQuestions = 0;
+    let totalIncorrectCodingQuestions = 0;
 
-  let marksForThis = 0;
-  if (total > 0) {
-    marksForThis = (passed / total) * 5;    // partial marks
-  } else {
-    // fallback if no test cases recorded; adjust if you prefer 0
-    marksForThis = cq.isCorrect ? 5 : 0;
-  }
+    for (const cq of codingQuestions) {
+      // expect cq to contain fields like yourCodingAnswer, total_test_cases, total_test_cases_passed, isCorrect
+      const total = Number(cq.total_test_cases) || 0;
+      const passed = Number(cq.total_test_cases_passed) || 0;
+      const userCode = (cq.yourCodingAnswer === undefined) ? null : cq.yourCodingAnswer;
 
-  codingMarks += marksForThis;
+      if (userCode === null || userCode === "") {
+        totalUnansweredCodingQuestions++;
+      } else {
+        totalAnsweredCodingQuestions++;
+      }
 
-  // (optional) persist per-question marks for UI/debug
-  // cq.marksAwarded = Number(marksForThis.toFixed(2));
-  // cq.maxMarks = 5;
-}
+      let marksForThis = 0;
+      if (total > 0) {
+        marksForThis = (passed / total) * codingMarksPerQ; // partial marks between 0..10
+      } else {
+        // fallback: if total testcases not available, use cq.isCorrect boolean if present
+        marksForThis = cq.isCorrect ? codingMarksPerQ : 0;
+      }
 
-const totalMarks = mcqMarks + codingMarks;
-const maxMarks = mcqMax + codingMax;
+      // If answered but not full marks, count as incorrect (adjust policy if you want different definition)
+      if ((userCode !== null && userCode !== "") && Number(marksForThis) < codingMarksPerQ) {
+        totalIncorrectCodingQuestions++;
+      }
 
+      codingMarks += Number(marksForThis);
+    }
 
-const score = maxMarks > 0 ? Math.round((totalMarks / maxMarks) * 100) : 0;
-const isPassed = score >= 75; // pass/fail on combined weighted score
+    // Round coding marks to 2 decimals
+    codingMarks = Number(codingMarks.toFixed(2));
+
+    // Totals & combined score
+    const totalMarks = mcqMarks + codingMarks;
+    const maxMarks = mcqMax + codingMax;
+    const score = maxMarks > 0 ? Math.round((totalMarks / maxMarks) * 100) : 0;
+    const isPassed = score >= 75; // pass threshold
 
     const totalQuestions = totalMcqQuestions + codingCount;
 
+    // Persist into progress object fields expected by schema
     progress.questions = updatedQuestionsWithCodingAndMcqAnswer;
-    progress.score = score;
+    progress.MarksScore = score;
     progress.isPassed = isPassed;
+    progress.TotalMarks = maxMarks;
     progress.status = isPassed ? "passed" : "failed";
     progress.totalQuestions = totalQuestions;
-    progress.yourAnswers = allAnswers.map(ans => ({
+
+    // MCQ meta
+    progress.TotalMcqQuestions = totalMcqQuestions;
+    progress.TotalAnsweredMcqQuestions = totalAnsweredMcqQuestions;
+    progress.TotalUnansweredMcqQuestions = totalUnansweredMcqQuestions;
+    progress.TotalIncorrectMcqQuestions = totalIncorrectMcqQuestions;
+    progress.MarksForEachMcqQuestion = mcqMarksPerQ;
+    progress.MarksScoredForMcq = mcqMarks;
+
+    // Coding meta
+    progress.TotalAnsweredCodingQuestions = totalAnsweredCodingQuestions;
+    progress.TotalUnansweredCodingQuestions = totalUnansweredCodingQuestions;
+    progress.TotalIncorrectCodingQuestions = totalIncorrectCodingQuestions;
+    progress.MarksForEachCodingQuestion = codingMarksPerQ;
+    progress.MarksScoredForCoding = codingMarks;
+
+    // Your raw answers (store as before)
+    progress.yourAnswers = (allAnswers || []).map(ans => ({
       questionId: ans.question_id,
       selectedOption: ans.option_id
     }));
+
     progress.lastAttemptedTime = new Date();
 
     await progress.save();
@@ -1434,12 +1484,14 @@ const isPassed = score >= 75; // pass/fail on combined weighted score
     });
 
   } catch (error) {
+    console.error("submitAssessment error:", error);
     return res.status(500).json({
       success: false,
       message: error.message || 'Failed to submit the test'
     });
   }
 };
+
 
 const moduleProgressChecker = async (req, res) => {
   try {
