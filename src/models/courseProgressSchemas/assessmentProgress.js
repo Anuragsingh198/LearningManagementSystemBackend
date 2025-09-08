@@ -58,12 +58,17 @@ duration: {
     type: Date,
     required: true
   },
-  MarksScore: {
+  PercentageMarksScore: {
     type: Number,
     default: 0,
     min: 0
   },
-   TotalMarks: {
+   MaxMarks: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  TotalMarksScored: {
     type: Number,
     default: 0,
     min: 0
@@ -74,6 +79,11 @@ duration: {
     min: 0
   },
   TotalAnsweredMcqQuestions: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+    TotalAnsweredAndCorrectMcqQuestions: {
     type: Number,
     default: 0,
     min: 0
@@ -98,6 +108,11 @@ duration: {
     min: 0
   },
     TotalAnsweredCodingQuestions: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  TotalAnsweredAndCorrectCodingQuestions: {
     type: Number,
     default: 0,
     min: 0

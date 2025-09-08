@@ -1,7 +1,7 @@
 const { getAllLanguages, getQuestionById, fetchAllCodingQuestions,    runCode, submitCode, addAssessment } = require('../controllers/jugde0Controller');
 const express = require('express');
 const { protect, isInstructor } = require('../middlewares/authmiddleware');
-const { getAllAssessments, startAssessment, submitAssessment, getAttemptedAssessment } = require('../controllers/CourseController');
+const { getAllAssessments, startAssessment, submitAssessment, getAttemptedAssessment, getAssessmentResult, getAttemptedAssessmentAdmin } = require('../controllers/CourseController');
 const assementRouter = express.Router();
 
 assementRouter.get('/get-languages', getAllLanguages);  
@@ -12,7 +12,10 @@ assementRouter.post('/add-assessment', protect,  addAssessment);
 assementRouter.get('/get-all-assessments', protect, getAllAssessments);    
 assementRouter.post('/start-assessment', protect, startAssessment);    
 assementRouter.post('/submit-assessment', protect, submitAssessment);   
-assementRouter.post('/review-assessment', protect, getAttemptedAssessment);    
+assementRouter.post('/view-all-assessment-result', protect, getAssessmentResult);   
+assementRouter.post('/review-assessment', protect, getAttemptedAssessment);   
+assementRouter.post('/review-assessment-admin', protect, getAttemptedAssessmentAdmin);    
+
 
 
 

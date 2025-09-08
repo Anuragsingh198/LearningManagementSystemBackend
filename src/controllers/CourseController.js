@@ -632,18 +632,18 @@ const updateVideoCompletion = expressAsyncHandler(async (req, res) => {
       videoProgress.lastWatchedTime = videoProgress.videoDuration || videoProgress.lastWatchedTime;
       await videoProgress.save();
       // console.log('checking status after saving', videoProgress.status)
-    
+
 
       const moduleProgress = await ModuleProgress.findOne({ userId, courseId, moduleId });
 
-         if (!moduleProgress) {
-      return res.status(404).json({
-        success: false,
-        message: "Module Progress not found for this user and module"
-      });
-    }
+      if (!moduleProgress) {
+        return res.status(404).json({
+          success: false,
+          message: "Module Progress not found for this user and module"
+        });
+      }
 
-    // console.log('the module Progress in update vid 90% is: ', moduleProgress)
+      // console.log('the module Progress in update vid 90% is: ', moduleProgress)
 
       if (moduleProgress) {
         moduleProgress.completedVideos += 1;
@@ -845,7 +845,7 @@ const deleteCourse = expressAsyncHandler(async (req, res) => {
     }
     const instructorId = course.instructor.toString();
     if (instructorId !== userId) {
-      
+
       return res.status(403).json({ success: false, message: "You are not authorized to delete this course." });
     }
 
@@ -1057,21 +1057,21 @@ const generateCertificate = expressAsyncHandler(async (req, res) => {
 // });
 
 const generateSASToken = expressAsyncHandler(async (req, res) => {
-    const blobName = req.query.blobName; // get from query
-    if (!blobName) return res.status(400).json({ success: false, message: 'blobName is required' });
+  const blobName = req.query.blobName; // get from query
+  if (!blobName) return res.status(400).json({ success: false, message: 'blobName is required' });
 
-    // console.log("Generating SAS token for blob:", blobName);
+  // console.log("Generating SAS token for blob:", blobName);
 
-    const hours = parseInt(req.query.hours) || 1;
-    const expiresInMinutes = hours * 60;
+  const hours = parseInt(req.query.hours) || 1;
+  const expiresInMinutes = hours * 60;
 
-    try {
-        const sasToken = await generateSasUrl({ blobName, expiresInMinutes });
-        res.status(200).json({ success: true, sasToken });
-    } catch (error) {
-        console.error('Error generating SAS token:', error);
-        res.status(500).json({ success: false, message: 'Error generating SAS token' });
-    }
+  try {
+    const sasToken = await generateSasUrl({ blobName, expiresInMinutes });
+    res.status(200).json({ success: true, sasToken });
+  } catch (error) {
+    console.error('Error generating SAS token:', error);
+    res.status(500).json({ success: false, message: 'Error generating SAS token' });
+  }
 });
 
 
@@ -1181,7 +1181,7 @@ const getAllAssessments = async (req, res) => {
 
 const getAttemptedAssessment = async (req, res) => {
   try {
-    const userId = req.user._id; // assuming user is available from auth middleware
+    const userId = req.user._id; 
     const { assessmentId } = req.body;
 
     if (!assessmentId) {
@@ -1217,6 +1217,46 @@ const getAttemptedAssessment = async (req, res) => {
     });
   }
 };
+
+const getAttemptedAssessmentAdmin = async (req, res) => {
+  try {
+    
+    const { assessmentId, userId } = req.body;
+    
+    if (!assessmentId) {
+      return res.status(400).json({
+        success: false,
+        message: "Assessment ID is required"
+      });
+    }
+
+    const userProgress = await AssessmentProgress.findOne({
+      user: userId,
+      assessment: assessmentId
+    }).populate("user", "name email employeeId");
+
+
+    if (!userProgress) {
+      return res.status(404).json({
+        success: false,
+        message: 'could not find attempted assessment'
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      data: userProgress
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: 'Unable to fetch the assessments',
+      error: err.message
+    });
+  }
+};
+
 
 const startAssessment = async (req, res) => {
   try {
@@ -1402,6 +1442,7 @@ const submitAssessment = async (req, res) => {
     const codingMax = codingCount * codingMarksPerQ;
 
     let totalAnsweredCodingQuestions = 0;
+    let TotalAnsweredAndCorrectCodingQuestions = 0;
     let totalUnansweredCodingQuestions = 0;
     let totalIncorrectCodingQuestions = 0;
 
@@ -1410,6 +1451,10 @@ const submitAssessment = async (req, res) => {
       const total = Number(cq.total_test_cases) || 0;
       const passed = Number(cq.total_test_cases_passed) || 0;
       const userCode = (cq.yourCodingAnswer === undefined) ? null : cq.yourCodingAnswer;
+
+      if (cq.isCorrect) {
+        TotalAnsweredAndCorrectCodingQuestions++;
+      }
 
       if (userCode === null || userCode === "") {
         totalUnansweredCodingQuestions++;
@@ -1437,20 +1482,22 @@ const submitAssessment = async (req, res) => {
     codingMarks = Number(codingMarks.toFixed(2));
 
     // Totals & combined score
-    const totalMarks = mcqMarks + codingMarks;
+    const totalMarksScored = mcqMarks + codingMarks;
     const maxMarks = mcqMax + codingMax;
-    const score = maxMarks > 0 ? Math.round((totalMarks / maxMarks) * 100) : 0;
+    const score = maxMarks > 0 ? Math.round((totalMarksScored / maxMarks) * 100) : 0;
     const isPassed = score >= 75; // pass threshold
 
     const totalQuestions = totalMcqQuestions + codingCount;
 
     // Persist into progress object fields expected by schema
     progress.questions = updatedQuestionsWithCodingAndMcqAnswer;
-    progress.MarksScore = score;
+    progress.PercentageMarksScore = score;
     progress.isPassed = isPassed;
-    progress.TotalMarks = maxMarks;
+    progress.MaxMarks = maxMarks;
     progress.status = isPassed ? "passed" : "failed";
     progress.totalQuestions = totalQuestions;
+    progress.TotalMarksScored = totalMarksScored;
+
 
     // MCQ meta
     progress.TotalMcqQuestions = totalMcqQuestions;
@@ -1459,6 +1506,7 @@ const submitAssessment = async (req, res) => {
     progress.TotalIncorrectMcqQuestions = totalIncorrectMcqQuestions;
     progress.MarksForEachMcqQuestion = mcqMarksPerQ;
     progress.MarksScoredForMcq = mcqMarks;
+    progress.TotalAnsweredAndCorrectMcqQuestions = correctCount;
 
     // Coding meta
     progress.TotalAnsweredCodingQuestions = totalAnsweredCodingQuestions;
@@ -1466,6 +1514,7 @@ const submitAssessment = async (req, res) => {
     progress.TotalIncorrectCodingQuestions = totalIncorrectCodingQuestions;
     progress.MarksForEachCodingQuestion = codingMarksPerQ;
     progress.MarksScoredForCoding = codingMarks;
+    progress.TotalAnsweredAndCorrectCodingQuestions = TotalAnsweredAndCorrectCodingQuestions
 
     // Your raw answers (store as before)
     progress.yourAnswers = (allAnswers || []).map(ans => ({
@@ -1474,6 +1523,8 @@ const submitAssessment = async (req, res) => {
     }));
 
     progress.lastAttemptedTime = new Date();
+    progress.completedAt = new Date();
+
 
     await progress.save();
 
@@ -1492,10 +1543,85 @@ const submitAssessment = async (req, res) => {
   }
 };
 
+// we have to desing a controller that fetches all the users for a particular test so the assessment Id we'll get from frontend
+// and then find all the assessment progress which have that assesment id and show it, and th
+
+
+const getAssessmentResult = async (req, res) => {
+  try {
+    const { assessmentId } = req.body; // assessment id as string
+
+    if (!assessmentId) {
+      return res.status(400).json({
+        success: false,
+        message: "Assessment ID is required"
+      });
+    }
+
+    // Safely cast to ObjectId
+    const objectId = mongoose.Types.ObjectId.createFromHexString(assessmentId);
+
+    // Fetch all progress records for this assessment
+    const progressList = await AssessmentProgress.find(
+      { assessment: objectId },
+      "user totalQuestions status startedAt completedAt PercentageMarksScore MaxMarks TotalMarksScored"
+    )
+      .populate("user", "name email employeeId")
+      .sort({ TotalMarksScored: -1 })
+      .lean();
+
+    // Fetch assessment
+    const assessment = await Assessment.findOne({ _id: objectId }).lean();
+
+    if (!assessment) {
+      return res.status(404).json({
+        success: false,
+        message: "No assessment found"
+      });
+    }
+
+    if (!progressList || progressList.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No progress found for this assessment"
+      });
+    }
+
+    // Map into clean response format
+    const results = progressList.map(progress => ({
+      user: progress.user,
+      totalQuestions: progress.totalQuestions,
+      status: progress.status,
+      startedAt: progress.startedAt,
+      completedAt: progress.completedAt,
+      percentageMarksScore: progress.PercentageMarksScore, 
+      maxMarks: progress.MaxMarks,
+      totalMarksScored: progress.TotalMarksScored
+    }));
+
+    return res.status(200).json({
+      success: true,
+      message: "Assessment results fetched successfully",
+      data: {
+        assessment,
+        results
+      }
+    });
+
+  } catch (err) {
+    console.error("Error in getAssessmentResult:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching assessment results"
+    });
+  }
+};
+
+
 
 const moduleProgressChecker = async (req, res) => {
   try {
-    const {  courseId, moduleId } = req.body;
+    const { courseId, moduleId } = req.body;
     const userId = req.user._id;
 
     // console.log('module id is: ', moduleId)
@@ -1516,7 +1642,7 @@ const moduleProgressChecker = async (req, res) => {
     const allVideoProgress = await VideoProgress.find({ userId, courseId, moduleId });
 
     // 3. Count completed videos
-    
+
     const completedCount = allVideoProgress.filter(v => v.status === "completed").length;
 
     // 4. Check if mismatch
@@ -1574,5 +1700,7 @@ module.exports = {
   startAssessment,
   submitAssessment,
   getAttemptedAssessment,
-  moduleProgressChecker
+  moduleProgressChecker,
+  getAssessmentResult,
+  getAttemptedAssessmentAdmin
 };
