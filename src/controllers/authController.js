@@ -71,21 +71,27 @@ const loginUser = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email: lowerEmail });
   if (user && (await user.matchPassword(password))) {
     res.json({
-      success: true, user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        courses: user.courses,
-        employeeId: user.employeeId || " ",
-        token: generateToken(user._id),
+      success: true, 
+      message: "password is correct",
+      isPasswordCorrect: true
+      // user: {
+        // _id: user._id,
+        // name: user.name,
+        // email: user.email,
+        // role: user.role,
+        // courses: user.courses,
+        // employeeId: user.employeeId || " ",
+        // token: generateToken(user._id),
       }
-    });
+    );
     // sendEmail('anuragsingh.bisen@ielektron.com' , ' hi this is test email')
   } else {
     res.status(401).json({ success: false, message: 'Invalid email or password' });
   }
 });
+
+
+
 
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -132,6 +138,53 @@ const generateOtpHandler = expressAsyncHandler(async (req, res) => {
   } catch (error) {
     //console.error("OTP Generation Error:", error);
     res.status(500).json({ success: false, message: "Failed to generate and send OTP." });
+  }
+});
+
+const loginOTPVerify = asyncHandler(async (req, res) => {
+    const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    return res.status(400).json({ success: false, message: "Email and OTP are required." });
+  }
+
+  try {
+    const record = await Otp.findOne({ email });
+
+    if (!record) {
+      return res.status(400).json({ success: false, message: "OTP not found." });
+    }
+
+    if (record.otp !== otp) {
+      return res.status(400).json({ success: false, message: "Invalid OTP." });
+    }
+
+    if (new Date() > record.expiresAt) {
+      await Otp.deleteOne({ email });
+      return res.status(400).json({ success: false, message: "OTP expired." });
+    }
+    await Otp.deleteOne({ email });
+
+  const lowerEmail = email.toLowerCase();
+  const user = await User.findOne({ email: lowerEmail });
+  if (user) {
+    res.status(200).json({
+      success: true, user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        courses: user.courses,
+        employeeId: user.employeeId || " ",
+        token: generateToken(user._id),
+      }
+    });
+   
+  }
+
+  } catch (error) {
+    //console.error("OTP Verification Error:", error);
+    res.status(500).json({ success: false, message: "Failed to verify OTP." });
   }
 });
 
@@ -254,5 +307,6 @@ module.exports = {
   generateOtpHandler,
   getEnrolledEmployees,
   verifyOtpHandler,
+  loginOTPVerify,
   resetPassword
 };

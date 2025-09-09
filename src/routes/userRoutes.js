@@ -1,5 +1,5 @@
 const express = require('express');
-const { registerUser, loginUser, getEnrolledEmployees, resetPassword, generateOtpHandler, verifyOtpHandler } = require('../controllers/authController');
+const { registerUser, loginUser, getEnrolledEmployees, resetPassword, generateOtpHandler, verifyOtpHandler, loginOTPVerify } = require('../controllers/authController');
 const { protect, isEmployee, isInstructor } = require('../middlewares/authmiddleware');
 const {  enrollCourse, moduleProgress, videoProgress, testProgress, getCoursesByUserId, getCourseWithProgress} = require('../controllers/userControllers');
 const { testSubmit, createUserProgressForNewModule, checkVideoOrTestInUserProgressSchema, getCourseByCourseId, updateVideoCompletion, moduleProgressChecker } = require('../controllers/CourseController');
@@ -47,6 +47,8 @@ useRoutes.post('/check-video-progress', protect, checkVideoOrTestInUserProgressS
 useRoutes.post('/generate-otp', generateOtpHandler)
 
 useRoutes.post('/verify-otp', verifyOtpHandler)
+useRoutes.post('/verify-signup-otp', loginOTPVerify )
+
 
 
 
