@@ -20,7 +20,7 @@ courseRoutes.post('/create-article', protect, isInstructor,
 courseRoutes.post('/create-video', protect, isInstructor, createVideo);
 
 courseRoutes.post('/addtest', protect, isInstructor, createTest);
-courseRoutes.get('/', getCourses);
+courseRoutes.get('/', protect, getCourses);
 courseRoutes.get('/modules/:courseId' , getModulesByCourseId)
 courseRoutes.get('/all-enrolled-employees', protect, isInstructor, fetchAllUsers)
 
