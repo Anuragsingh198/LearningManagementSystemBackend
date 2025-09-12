@@ -1672,6 +1672,23 @@ const moduleProgressChecker = async (req, res) => {
   }
 };
 
+const fetchAllUsers = async () => {
+  try{
+    const allUsers = await User.find().populate("courses", "title compulsory")
+    
+    return res.status(200).json({
+      success: true,
+      users: allUsers
+    })
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch users",
+      error: error.message
+    })
+  }
+}
+
 
 module.exports = {
   createCourse,
@@ -1702,5 +1719,6 @@ module.exports = {
   getAttemptedAssessment,
   moduleProgressChecker,
   getAssessmentResult,
-  getAttemptedAssessmentAdmin
+  getAttemptedAssessmentAdmin,
+  fetchAllUsers
 };
